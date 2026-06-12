@@ -204,6 +204,7 @@ function _fishMakeTexture(species) {
   ctx.restore();
 
   const tex = new THREE.CanvasTexture(canvas);
+  tex.flipY = false;  // CanvasTexture は flipY=true がデフォルトだが、UVのv=0=背面(上)と合わせるためfalseに
   tex.needsUpdate = true;
   _FishTexCache.set(key, tex);
   return tex;
@@ -263,109 +264,114 @@ function _fishMakeBodyGeometry(m, length) {
   // halfH: 体高の半分, halfW: 体幅の半分
   let ctrlPts; // [[u, cY, hH, hW], ...]
 
+  // NOTE: hH/hW はメートル単位。bodyH/bodyW は「全体高/全体幅の体長比」なので半分にする
+  const bH = bodyH * length * 0.5; // 最大体高の半分(m)
+  const bW = bodyW * length * 0.5; // 最大体幅の半分(m)
+
   if (profile === 'standard') {
     // 標準(チヌ・メジナ等)
     ctrlPts = [
-      [0.00, 0.00, bodyH * 0.10, bodyW * 0.08],  // 口先
-      [0.05, 0.00, bodyH * 0.30, bodyW * 0.45],  // 口
-      [0.12, 0.00, bodyH * 0.55, bodyW * 0.72],  // 頭前
-      [0.20, 0.00, bodyH * 0.80, bodyW * 0.90],  // 鰓蓋
-      [0.30, 0.00, bodyH * 1.00, bodyW * 1.00],  // 体最大断面
-      [0.42, 0.00, bodyH * 0.98, bodyW * 0.96],
-      [0.55, 0.00, bodyH * 0.88, bodyW * 0.86],
-      [0.68, 0.00, bodyH * 0.68, bodyW * 0.65],
-      [0.80, 0.00, bodyH * 0.45, bodyW * 0.42],
-      [0.90, 0.00, bodyH * 0.22, bodyW * 0.20],
-      [0.97, 0.00, bodyH * 0.08, bodyW * 0.07],
-      [1.00, 0.00, bodyH * 0.03, bodyW * 0.02],  // 尾柄
+      [0.00, 0.00, bH * 0.08, bW * 0.06],  // 口先
+      [0.05, 0.00, bH * 0.25, bW * 0.38],  // 口
+      [0.12, 0.00, bH * 0.52, bW * 0.65],  // 頭前
+      [0.20, 0.00, bH * 0.78, bW * 0.88],  // 鰓蓋
+      [0.30, 0.00, bH * 1.00, bW * 1.00],  // 体最大断面
+      [0.42, 0.00, bH * 0.98, bW * 0.96],
+      [0.55, 0.00, bH * 0.88, bW * 0.86],
+      [0.68, 0.00, bH * 0.68, bW * 0.65],
+      [0.80, 0.00, bH * 0.42, bW * 0.40],
+      [0.90, 0.00, bH * 0.20, bW * 0.18],
+      [0.97, 0.00, bH * 0.07, bW * 0.06],
+      [1.00, 0.00, bH * 0.025, bW * 0.015],  // 尾柄
     ];
   } else if (profile === 'deep') {
     // タイ型(体高大)
     ctrlPts = [
-      [0.00, 0.00, bodyH * 0.08, bodyW * 0.07],
-      [0.05, 0.00, bodyH * 0.28, bodyW * 0.40],
-      [0.12, 0.00, bodyH * 0.58, bodyW * 0.68],
-      [0.20, 0.00, bodyH * 0.88, bodyW * 0.88],
-      [0.30, 0.00, bodyH * 1.00, bodyW * 1.00],
-      [0.42, 0.02, bodyH * 1.08, bodyW * 0.95],  // 最大高
-      [0.55, 0.02, bodyH * 1.00, bodyW * 0.88],
-      [0.68, 0.00, bodyH * 0.72, bodyW * 0.65],
-      [0.80, 0.00, bodyH * 0.42, bodyW * 0.38],
-      [0.90, 0.00, bodyH * 0.18, bodyW * 0.16],
-      [1.00, 0.00, bodyH * 0.03, bodyW * 0.02],
+      [0.00, 0.00,           bH * 0.07, bW * 0.06],
+      [0.05, 0.00,           bH * 0.26, bW * 0.38],
+      [0.12, 0.00,           bH * 0.55, bW * 0.65],
+      [0.20, 0.00,           bH * 0.85, bW * 0.85],
+      [0.30, 0.00,           bH * 1.00, bW * 1.00],
+      [0.42, bH * 0.05,      bH * 1.10, bW * 0.96],  // 最大高
+      [0.55, bH * 0.04,      bH * 1.00, bW * 0.88],
+      [0.68, 0.00,           bH * 0.72, bW * 0.65],
+      [0.80, 0.00,           bH * 0.40, bW * 0.36],
+      [0.90, 0.00,           bH * 0.16, bW * 0.14],
+      [1.00, 0.00,           bH * 0.025, bW * 0.015],
     ];
   } else if (profile === 'slender') {
     // サヨリ/タチウオ等 細長
     ctrlPts = [
-      [0.00, 0.00, bodyH * 0.04, bodyW * 0.04],
-      [0.06, 0.00, bodyH * 0.12, bodyW * 0.20],
-      [0.15, 0.00, bodyH * 0.32, bodyW * 0.55],
-      [0.25, 0.00, bodyH * 0.55, bodyW * 0.80],
-      [0.35, 0.00, bodyH * 0.75, bodyW * 0.95],
-      [0.48, 0.00, bodyH * 0.82, bodyW * 1.00],
-      [0.60, 0.00, bodyH * 0.78, bodyW * 0.94],
-      [0.70, 0.00, bodyH * 0.60, bodyW * 0.70],
-      [0.80, 0.00, bodyH * 0.38, bodyW * 0.42],
-      [0.90, 0.00, bodyH * 0.18, bodyW * 0.18],
-      [1.00, 0.00, bodyH * 0.03, bodyW * 0.02],
+      [0.00, 0.00, bH * 0.04, bW * 0.04],
+      [0.06, 0.00, bH * 0.12, bW * 0.20],
+      [0.15, 0.00, bH * 0.32, bW * 0.55],
+      [0.25, 0.00, bH * 0.55, bW * 0.80],
+      [0.35, 0.00, bH * 0.75, bW * 0.95],
+      [0.48, 0.00, bH * 0.82, bW * 1.00],
+      [0.60, 0.00, bH * 0.78, bW * 0.94],
+      [0.70, 0.00, bH * 0.60, bW * 0.70],
+      [0.80, 0.00, bH * 0.38, bW * 0.42],
+      [0.90, 0.00, bH * 0.18, bW * 0.18],
+      [1.00, 0.00, bH * 0.03, bW * 0.02],
     ];
   } else if (profile === 'flat') {
-    // ヒラメ/マゴチ 水平に押し潰し(bodyW大、bodyH小)
+    // ヒラメ/マゴチ: 横に平たく(bodyWが体幅=大きい、bodyHが体高=小さい)
+    // flat では hH=体高方向(Y)、hW=横方向(X左右)
     ctrlPts = [
-      [0.00, 0.00, bodyH * 0.06, bodyW * 0.10],
-      [0.05, 0.00, bodyH * 0.20, bodyW * 0.40],
-      [0.12, 0.00, bodyH * 0.45, bodyW * 0.70],
-      [0.20, 0.00, bodyH * 0.72, bodyW * 0.90],
-      [0.30, 0.00, bodyH * 0.92, bodyW * 1.00],
-      [0.42, 0.00, bodyH * 1.00, bodyW * 1.00],
-      [0.55, 0.00, bodyH * 0.95, bodyW * 0.96],
-      [0.68, 0.00, bodyH * 0.75, bodyW * 0.78],
-      [0.80, 0.00, bodyH * 0.48, bodyW * 0.50],
-      [0.90, 0.00, bodyH * 0.22, bodyW * 0.22],
-      [1.00, 0.00, bodyH * 0.04, bodyW * 0.03],
+      [0.00, 0.00, bH * 0.06, bW * 0.12],
+      [0.05, 0.00, bH * 0.20, bW * 0.42],
+      [0.12, 0.00, bH * 0.45, bW * 0.72],
+      [0.20, 0.00, bH * 0.72, bW * 0.90],
+      [0.30, 0.00, bH * 0.92, bW * 1.00],
+      [0.42, 0.00, bH * 1.00, bW * 1.00],
+      [0.55, 0.00, bH * 0.95, bW * 0.96],
+      [0.68, 0.00, bH * 0.75, bW * 0.78],
+      [0.80, 0.00, bH * 0.48, bW * 0.50],
+      [0.90, 0.00, bH * 0.22, bW * 0.22],
+      [1.00, 0.00, bH * 0.04, bW * 0.03],
     ];
   } else if (profile === 'eel') {
     // ウナギ/アナゴ/タチウオ: 非常に細長、一様断面が長く続く
     ctrlPts = [
-      [0.00, 0.00, bodyH * 0.12, bodyW * 0.12],
-      [0.04, 0.00, bodyH * 0.30, bodyW * 0.45],
-      [0.10, 0.00, bodyH * 0.58, bodyW * 0.70],
-      [0.18, 0.00, bodyH * 0.80, bodyW * 0.90],
-      [0.28, 0.00, bodyH * 0.92, bodyW * 1.00],
-      [0.40, 0.00, bodyH * 0.95, bodyW * 1.00],
-      [0.55, 0.00, bodyH * 0.94, bodyW * 0.98],
-      [0.68, 0.00, bodyH * 0.88, bodyW * 0.90],
-      [0.80, 0.00, bodyH * 0.72, bodyW * 0.72],
-      [0.90, 0.00, bodyH * 0.45, bodyW * 0.42],
-      [0.96, 0.00, bodyH * 0.22, bodyW * 0.18],
-      [1.00, 0.00, bodyH * 0.08, bodyW * 0.06],
+      [0.00, 0.00, bH * 0.12, bW * 0.12],
+      [0.04, 0.00, bH * 0.30, bW * 0.45],
+      [0.10, 0.00, bH * 0.58, bW * 0.70],
+      [0.18, 0.00, bH * 0.80, bW * 0.90],
+      [0.28, 0.00, bH * 0.92, bW * 1.00],
+      [0.40, 0.00, bH * 0.95, bW * 1.00],
+      [0.55, 0.00, bH * 0.94, bW * 0.98],
+      [0.68, 0.00, bH * 0.88, bW * 0.90],
+      [0.80, 0.00, bH * 0.72, bW * 0.72],
+      [0.90, 0.00, bH * 0.45, bW * 0.42],
+      [0.96, 0.00, bH * 0.22, bW * 0.18],
+      [1.00, 0.00, bH * 0.08, bW * 0.06],
     ];
   } else if (profile === 'round') {
     // フグ/ハリセンボン: 丸くコロッとした体
     ctrlPts = [
-      [0.00, 0.00, bodyH * 0.10, bodyW * 0.10],
-      [0.06, 0.00, bodyH * 0.40, bodyW * 0.55],
-      [0.14, 0.00, bodyH * 0.72, bodyW * 0.85],
-      [0.24, 0.00, bodyH * 0.92, bodyW * 1.00],
-      [0.38, 0.00, bodyH * 1.00, bodyW * 1.00],
-      [0.52, 0.00, bodyH * 1.00, bodyW * 1.00],
-      [0.65, 0.00, bodyH * 0.92, bodyW * 0.95],
-      [0.75, 0.00, bodyH * 0.72, bodyW * 0.78],
-      [0.85, 0.00, bodyH * 0.42, bodyW * 0.45],
-      [0.93, 0.00, bodyH * 0.16, bodyW * 0.16],
-      [1.00, 0.00, bodyH * 0.04, bodyW * 0.03],
+      [0.00, 0.00, bH * 0.10, bW * 0.10],
+      [0.06, 0.00, bH * 0.40, bW * 0.55],
+      [0.14, 0.00, bH * 0.72, bW * 0.85],
+      [0.24, 0.00, bH * 0.92, bW * 1.00],
+      [0.38, 0.00, bH * 1.00, bW * 1.00],
+      [0.52, 0.00, bH * 1.00, bW * 1.00],
+      [0.65, 0.00, bH * 0.92, bW * 0.95],
+      [0.75, 0.00, bH * 0.72, bW * 0.78],
+      [0.85, 0.00, bH * 0.42, bW * 0.45],
+      [0.93, 0.00, bH * 0.16, bW * 0.16],
+      [1.00, 0.00, bH * 0.04, bW * 0.03],
     ];
   } else {
     // squid/default: standard と同様のfallback
     ctrlPts = [
-      [0.00, 0.00, bodyH * 0.10, bodyW * 0.08],
-      [0.05, 0.00, bodyH * 0.30, bodyW * 0.45],
-      [0.12, 0.00, bodyH * 0.55, bodyW * 0.72],
-      [0.20, 0.00, bodyH * 0.80, bodyW * 0.90],
-      [0.30, 0.00, bodyH * 1.00, bodyW * 1.00],
-      [0.55, 0.00, bodyH * 0.88, bodyW * 0.86],
-      [0.80, 0.00, bodyH * 0.45, bodyW * 0.42],
-      [1.00, 0.00, bodyH * 0.03, bodyW * 0.02],
+      [0.00, 0.00, bH * 0.10, bW * 0.08],
+      [0.05, 0.00, bH * 0.30, bW * 0.45],
+      [0.12, 0.00, bH * 0.55, bW * 0.72],
+      [0.20, 0.00, bH * 0.80, bW * 0.90],
+      [0.30, 0.00, bH * 1.00, bW * 1.00],
+      [0.55, 0.00, bH * 0.88, bW * 0.86],
+      [0.80, 0.00, bH * 0.45, bW * 0.42],
+      [1.00, 0.00, bH * 0.03, bW * 0.02],
     ];
   }
 
@@ -382,8 +388,8 @@ function _fishMakeBodyGeometry(m, length) {
     if (ctrlPts[2]) { ctrlPts[2][2] *= 0.5; ctrlPts[2][3] *= 0.5; }
   }
 
-  // flat プロファイル: 断面を水平に押し潰す変換(halfW >> halfH)
-  const flatRatio = (profile === 'flat') ? 3.5 : 1.0;
+  // flat プロファイルは bodyW/bodyH比で既に扁平化済み。追加変形不要。
+  const flatRatio = 1.0;
 
   // スプラインから u 地点の断面パラメータを補間
   function sampleProfile(u) {
@@ -425,7 +431,7 @@ function _fishMakeBodyGeometry(m, length) {
       let cosT = Math.cos(theta);
       let sinT = Math.sin(theta);
 
-      const px = sp.hH * cosT * (1.0 / flatRatio) + sp.cY * length;
+      const px = sp.hH * cosT * (1.0 / flatRatio) + sp.cY;
       const py = sp.hW * sinT * flatRatio;
       const pz = zPos;
 
@@ -459,7 +465,8 @@ function _fishMakeBodyGeometry(m, length) {
   geo.setIndex(indices);
   geo.computeVertexNormals();
 
-  return geo;
+  // sample(u) で体表断面 {cY, hH, hW}(m) を取れるようにして鰭/目の配置に使う
+  return { geo, sample: sampleProfile };
 }
 
 // ── 鰭Shape生成 ──────────────────────────────────────────────────────
@@ -470,12 +477,13 @@ function _fishFinShape(type, w, h, spiny) {
     // 背鰭: 台形〜三角
     shape.moveTo(0, 0);
     if (spiny) {
-      // 棘条ギザ輪郭
-      const nSpines = Math.max(5, Math.round(w * 25));
-      for (let i = 0; i <= nSpines; i++) {
-        const t = i / nSpines;
+      // 棘条ギザ輪郭(細かい鋸歯。前方が高く後方へ滑らかに低く)
+      const nSpines = 11;
+      for (let i = 0; i <= nSpines * 2; i++) {
+        const t = i / (nSpines * 2);
         const x = t * w;
-        const y = (i % 2 === 0) ? h * 0.9 : h * 0.55;
+        const envelope = h * (0.55 + 0.45 * Math.sin(Math.min(t * 2.2, 1) * Math.PI * 0.5)) * (1 - t * 0.25);
+        const y = (i % 2 === 0) ? envelope * 0.78 : envelope;
         shape.lineTo(x, y);
       }
     } else {
@@ -553,6 +561,20 @@ function _fishTailShape(tailType, w, h) {
 }
 
 // ── 鰭メッシュ生成 ────────────────────────────────────────────────────
+
+// 鰭基部を体表ライン(背線/腹線)に沿って曲げる(geometry空間: X=軸方向オフセット, Y=上下)
+function _fishBendFinBase(geo, startU, length, surf, topSign) {
+  const pos = geo.attributes.position;
+  const s0 = surf(startU);
+  const edge0 = s0.cY + topSign * s0.hH;
+  for (let i = 0; i < pos.count; i++) {
+    const u = _fishClamp(startU + pos.getX(i) / length, 0, 1);
+    const s = surf(u);
+    pos.setY(i, pos.getY(i) + (s.cY + topSign * s.hH) - edge0);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+}
 
 function _fishMakeFin(shape, depth, finColor, opacity) {
   const extSettings = {
@@ -882,14 +904,15 @@ function FishCreateMesh(species, sizeCm) {
   }
 
   // ボディマテリアル(スウェイ用)
+  // metalness低めにしてテクスチャ色が見えるようにし、clearcoatで銀皮光沢を演出
   const bodyMat = new THREE.MeshPhysicalMaterial({
-    color: bodyColor,
+    color: new THREE.Color('#ffffff'),  // テクスチャをそのまま活かす(white掛け算=テクスチャ色)
     map: bodyTex,
-    roughness: 0.35,
-    metalness: m.sheen * 0.5,
-    clearcoat: 0.6,
-    clearcoatRoughness: 0.3,
-    envMapIntensity: m.sheen > 0.5 ? 1.5 : 0.8
+    roughness: 0.40,
+    metalness: m.sheen * 0.10,         // 非常に低め: テクスチャalbedoを保持
+    clearcoat: m.sheen,                // sheen値をそのままclearcoatに
+    clearcoatRoughness: 0.20,
+    envMapIntensity: 0.8
   });
   _fishInjectSway(bodyMat);
 
@@ -906,92 +929,140 @@ function FishCreateMesh(species, sizeCm) {
 
   } else {
     // 通常魚: 胴体BufferGeometry
-    const bodyGeo = _fishMakeBodyGeometry(m, length);
-    bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+    const bodyRes = _fishMakeBodyGeometry(m, length);
+    const surf = bodyRes.sample; // u→{cY,hH,hW} 体表サンプラ
+    bodyMesh = new THREE.Mesh(bodyRes.geo, bodyMat);
     bodyMesh.castShadow = true;
     bodyMesh.receiveShadow = true;
     group.add(bodyMesh);
 
-    // 背鰭
+    // ── 鰭配置: 全て ShapeはXY平面(X=幅、Y=高さ)。
+    //   ExtrudeのdepthはZ方向(薄い厚み)。
+    //   背鰭: 体軸Z方向に幅を向け、Y方向に高さ。
+    //     → rotation.y = PI/2 (X→Z に回す)、position.z = start位置、position.y = 体背面
+    //   臀鰭: 同様だが下向き。Shapeのhが-Y方向。rotation.y = PI/2、position.y = 体腹面
+    //   胸鰭: ShapeはXY平面をそのまま使い、rotation.y でXZ平面に倒す → 体側から扇状に広がる
+
+    // ── 鰭/目の配置はすべて surf(u)={cY,hH,hW}(m) で実際の体表に沿わせる ──
+    // 座標系: x=左右, y=上下, z=体軸(頭が-z、尾が+z)。u→z は z=(u-0.5)*length。
+
+    const isFlatP = (profile === 'flat');
+
+    // 背鰭: 中央矢状面(YZ面)。rotation.y=-PI/2 で Shape X→+Z(尾方向)。
+    // 基部は背線カーブに沿わせる。flat は水平の周縁鰭として +X 側に倒す。
     if (m.dorsal) {
       const d = m.dorsal;
       const dw = (d.end - d.start) * length;
       const dh = d.h * length;
-      const dShape = _fishFinShape('dorsal', dw, dh, d.spiny);
+      const dShape = _fishFinShape('dorsal', dw, dh, d.spiny && !isFlatP);
       const dMesh = _fishMakeFin(dShape, 0.003 * length, finColor, 0.85);
-      // 背鰭は体の上面(y>0)の位置
-      dMesh.position.set(0, length * m.bodyH * 0.72, ((d.start + d.end) * 0.5 - 0.5) * length);
-      dMesh.rotation.x = -Math.PI / 2;
-      dMesh.rotation.z = -Math.PI / 2;
+      const s0 = surf(d.start);
+      if (isFlatP) {
+        // 周縁の縁鰭: 体側(±X)の輪郭に沿う水平鰭
+        _fishBendFinBase(dMesh.geometry, d.start, length, surf, +1); // hWでなくhHだが輪郭近似
+        dMesh.rotation.order = 'ZYX';
+        dMesh.rotation.y = -Math.PI / 2;
+        dMesh.rotation.z = -Math.PI / 2 + 0.12;
+        dMesh.position.set(surf((d.start + d.end) / 2).hW * 0.72, 0, (d.start - 0.5) * length);
+      } else {
+        _fishBendFinBase(dMesh.geometry, d.start, length, surf, +1);
+        dMesh.rotation.y = -Math.PI / 2;
+        dMesh.position.set(0, s0.cY + s0.hH - dh * 0.15, (d.start - 0.5) * length);
+      }
       group.add(dMesh);
     }
 
-    // 臀鰭
+    // 臀鰭: 同じく中央矢状面、下向き(Shapeのhが-Y方向)。flat は -X 側水平。
     if (m.anal) {
       const a = m.anal;
       const aw = (a.end - a.start) * length;
       const ah = a.h * length;
       const aShape = _fishFinShape('anal', aw, ah, false);
       const aMesh = _fishMakeFin(aShape, 0.003 * length, finColor, 0.80);
-      aMesh.position.set(0, -length * m.bodyH * 0.55, ((a.start + a.end) * 0.5 - 0.5) * length);
-      aMesh.rotation.x = -Math.PI / 2;
-      aMesh.rotation.z = -Math.PI / 2;
+      const s0 = surf(a.start);
+      if (isFlatP) {
+        _fishBendFinBase(aMesh.geometry, a.start, length, surf, -1);
+        aMesh.rotation.order = 'ZYX';
+        aMesh.rotation.y = -Math.PI / 2;
+        aMesh.rotation.z = -Math.PI / 2 - 0.12;
+        aMesh.position.set(-surf((a.start + a.end) / 2).hW * 0.72, 0, (a.start - 0.5) * length);
+      } else {
+        _fishBendFinBase(aMesh.geometry, a.start, length, surf, -1);
+        aMesh.rotation.y = -Math.PI / 2;
+        aMesh.position.set(0, s0.cY - s0.hH + ah * 0.15, (a.start - 0.5) * length);
+      }
       group.add(aMesh);
     }
 
-    // 胸鰭 (両側)
-    if (m.pectoral) {
+    // 胸鰭(両側): 体側表面から後方斜め下に開く扇。flat では省略(目立つ破綻防止)
+    if (m.pectoral && !isFlatP) {
       const pw = m.pectoral * length;
-      const ph = pw * 0.75;
+      const ph = pw * 0.80;
       const pShape = _fishFinShape('pectoral', pw, ph, false);
+      const uPec = 0.24;
+      const sPec = surf(uPec);
       for (let side = -1; side <= 1; side += 2) {
-        const pMesh = _fishMakeFin(pShape, 0.003 * length, finColor, 0.80);
+        const pMesh = _fishMakeFin(pShape, 0.002 * length, finColor, 0.82);
+        // 基部を体表に少し埋め込む
         pMesh.position.set(
-          side * length * m.bodyW * 0.9,
-          0,
-          -length * 0.26
+          side * sPec.hW * 0.80,
+          sPec.cY - sPec.hH * 0.10,
+          (uPec - 0.5) * length
         );
-        pMesh.rotation.y = side * (Math.PI * 0.5 + Math.PI * 0.08);
+        // Shape+X(扇の伸び)を後方+Zへ、左右に開き、やや下げる
+        pMesh.rotation.order = 'YZX';
+        pMesh.rotation.y = -Math.PI / 2 + side * 0.55;
+        pMesh.rotation.z = side * -0.35;
         group.add(pMesh);
       }
     }
 
-    // 尾鰭
+    // 尾鰭: 中央矢状面で後方に展開。
+    // _fishTailShape は X=±半幅(→上下), Y=0..h(→後方) で描かれているため
+    // rotation.set(0,-PI/2,-PI/2) で ShapeY→+Z(後方), ShapeX→∓Y(上下対称) に写す。
     {
-      const tw = length * m.bodyH * 1.1;
-      const th = length * m.bodyH * 1.3;
-      const tShape = _fishTailShape(m.tail, tw * 0.5, th);
-      const tMesh = _fishMakeFin(tShape, 0.004 * length, finColor, 0.88);
-      // 体軸後端(z=+length*0.5付近)に配置、XZ平面で左右対称
-      tMesh.position.set(-tw * 0.25, -th * 0.45, length * 0.46);
-      tMesh.rotation.x = -Math.PI / 2;
+      const sEnd = surf(0.97);
+      const sMax = surf(0.35);
+      const tHalf = (isFlatP ? sMax.hW * 0.85 : sMax.hH * 0.95); // flatは水平扇
+      const tLen = length * (m.tail === 'lunate' ? 0.20 : m.tail === 'forked' ? 0.18 : 0.15);
+      const tShape = _fishTailShape(m.tail, tHalf, tLen);
+      const tMesh = _fishMakeFin(tShape, 0.003 * length, finColor, 0.88);
+      if (isFlatP) {
+        tMesh.rotation.x = Math.PI / 2; // ShapeY→+Z(後方), ShapeX→±X(水平)
+      } else {
+        tMesh.rotation.set(0, -Math.PI / 2, -Math.PI / 2);
+      }
+      tMesh.position.set(0, sEnd.cY, length * 0.465); // 尾柄に少し食い込ませる
       group.add(tMesh);
     }
 
-    // flat プロファイル: 両目を上面に
+    // 目: 頭部(u≈0.13)の体表に半埋め込み。虹彩(+Z向き)を外側に向ける
     const isFlat = (profile === 'flat');
-    const eyeRadius = length * 0.04;
+    const eyeRadius = length * (profile === 'round' ? 0.030 : 0.024);
+    const uEye = (m.snout === 'long') ? 0.18 : 0.13;
+    const sEye = surf(uEye);
 
     if (isFlat) {
-      // 両目ともy>0 上面、左右に寄せる
+      // ヒラメ等: 両目とも上面、虹彩は上向き
       for (let side = -1; side <= 1; side += 2) {
         const eyeGrp = _fishMakeEye(c.eye, eyeRadius);
         eyeGrp.position.set(
-          side * length * m.bodyW * 0.32,
-          length * m.bodyH * 0.38,
-          -length * 0.30
+          side * sEye.hW * 0.30,
+          sEye.cY + sEye.hH * 0.85,
+          (uEye + 0.04 - 0.5) * length
         );
+        eyeGrp.rotation.x = -Math.PI / 2;
         group.add(eyeGrp);
       }
     } else {
-      // 通常魚: 左右両側に目
       for (let side = -1; side <= 1; side += 2) {
         const eyeGrp = _fishMakeEye(c.eye, eyeRadius);
         eyeGrp.position.set(
-          side * length * m.bodyW * 0.92,
-          length * m.bodyH * 0.18,
-          -length * 0.35
+          side * sEye.hW * 0.78,    // 体表に半分埋める
+          sEye.cY + sEye.hH * 0.28,
+          (uEye - 0.5) * length
         );
+        eyeGrp.rotation.y = side * Math.PI / 2; // 虹彩を外側へ
         group.add(eyeGrp);
       }
     }
@@ -1002,14 +1073,15 @@ function FishCreateMesh(species, sizeCm) {
 
   // eel プロファイル: 連続背鰭ライン(背鰭を長く展開)
   if (profile === 'eel' && m.dorsal) {
+    const bHeel = m.bodyH * length * 0.5; // 半体高
     const d = m.dorsal;
     const ew = (0.90 - 0.12) * length; // eel は全長にわたる
     const eh = d.h * length * 0.7;
     const eShape = _fishFinShape('dorsal', ew, eh, false);
     const eMesh = _fishMakeFin(eShape, 0.002 * length, finColor, 0.75);
-    eMesh.position.set(0, length * m.bodyH * 0.55, (0.12 + 0.90) * 0.5 * length - length * 0.5);
-    eMesh.rotation.x = -Math.PI / 2;
-    eMesh.rotation.z = -Math.PI / 2;
+    const eStartZ = (0.12 - 0.5) * length;
+    eMesh.rotation.y = -Math.PI / 2;
+    eMesh.position.set(0, bHeel * 0.62, eStartZ);
     group.add(eMesh);
   }
 
