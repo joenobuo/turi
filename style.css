@@ -68,14 +68,16 @@ html, body {
 }
 
 .ui-title__sub {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
-  font-size: clamp(0.8rem, 2.2vw, 1.15rem);
-  letter-spacing: 0.3em;
+  font-size: clamp(0.82rem, 1.8vw, 1.0rem);
   color: #b0a888;
-  margin-top: 0.7rem;
+  margin-top: 0.8rem;
+  margin-bottom: 0.2rem;
   opacity: 0.88;
+  gap: 0.28em;
 }
 
 .ui-title__deco-line {
@@ -796,9 +798,9 @@ html, body {
 }
 
 .ui-dex-cell:hover {
-  border-color: rgba(200,160,64,0.5);
-  box-shadow: 0 0 12px rgba(200,160,64,0.12);
-  transform: translateY(-2px);
+  border-color: #cc3333;
+  box-shadow: 0 0 14px rgba(204,51,51,0.28), 0 4px 16px rgba(0,0,0,0.4);
+  transform: translateY(-4px);
 }
 
 .ui-dex-cell.is-caught {
@@ -866,12 +868,12 @@ html, body {
 }
 
 .ui-dex-detail__card {
-  width: min(420px, 90vw);
-  background: rgba(10,20,35,0.96);
-  border: 1px solid rgba(242,234,216,0.18);
+  width: min(440px, 90vw);
+  background: rgba(8,18,32,0.97);
+  border: 1px solid rgba(200,160,64,0.28);
   border-radius: 8px;
-  padding: 1.6rem 1.8rem;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  padding: 1.8rem 2rem 1.6rem;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.85), inset 0 0 40px rgba(10,30,60,0.3);
   animation: card-in 0.3s ease-out;
   position: relative;
 }
@@ -901,7 +903,9 @@ html, body {
   font-size: 1.4rem;
   letter-spacing: 0.12em;
   color: #f2ead8;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(200,160,64,0.20);
 }
 
 .ui-dex-detail__name-en {
@@ -912,7 +916,11 @@ html, body {
 
 .ui-dex-detail__svg-wrap {
   text-align: center;
-  margin-bottom: 0.8rem;
+  margin: 0.7rem 0 1rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  padding: 0.5rem 0;
+  border: 1px solid rgba(242,234,216,0.06);
 }
 
 .ui-dex-detail__rarity {
@@ -925,8 +933,13 @@ html, body {
 .ui-dex-detail__meta {
   font-size: 0.78rem;
   color: #b0a888;
-  margin-bottom: 0.8rem;
-  line-height: 1.8;
+  margin-bottom: 0.9rem;
+  line-height: 1.9;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
+  border-left: 2px solid rgba(200,160,64,0.30);
+  white-space: pre-line;
 }
 
 .ui-dex-detail__desc {
@@ -942,7 +955,10 @@ html, body {
 .ui-dex-detail__record {
   font-size: 0.78rem;
   color: #8ab08a;
-  margin-top: 0.6rem;
+  margin-top: 0.7rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(138,176,138,0.18);
+  letter-spacing: 0.05em;
 }
 
 /* ============================================================

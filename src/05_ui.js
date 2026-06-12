@@ -7,12 +7,14 @@
 /* ---------- SVGシルエット生成ヘルパー ---------- */
 
 /**
- * 魚種の model.profile / model.tail などから簡易 SVG パス文字列を生成。
- * @param {object} species  SPECIES エントリ
- * @param {boolean} filled  未捕獲=true(グレー塗りつぶし)
- * @param {number} w 横幅px
- * @param {number} h 縦幅px
- * @returns {string} <svg>…</svg> 文字列
+ * 魚種の model から「ちゃんと魚に見える」SVGシルエットを生成。
+ * 3次ベジェで口先→背中→尾柄→尾ひれ→腹→口先を閉じる。
+ * 背鰭・臀鰭・胸鰭の突起、目も描画。
+ * profile別にボディ形状を変える:
+ *   standard/deep/slender/round → 通常の魚
+ *   flat  → ヒラメ型(横長・両目が上面)
+ *   eel   → 細長いS字体型
+ *   squid → イカ型(外套+脚束+三角ひれ)
  */
 function UIBuildFishSVG(species, filled, w, h) {
   w = w || 80;
@@ -20,157 +22,491 @@ function UIBuildFishSVG(species, filled, w, h) {
   var m = (species && species.model) ? species.model : {};
   var profile = m.profile || 'standard';
   var tail    = m.tail    || 'forked';
-  var bodyH   = m.bodyH  || 0.30;
-  var bodyW   = m.bodyW  || 0.13;
+  var bodyH   = (m.bodyH  !== undefined) ? m.bodyH  : 0.30;
   var isCat   = species && species.category === 'fantasy';
 
-  // 輪郭色
-  var strokeColor = filled ? '#666' : (isCat ? '#a03cdc' : '#44aa77');
-  var fillColor   = filled ? '#444' : (m.colors ? (m.colors.base || '#6a8fa0') : '#6a8fa0');
+  // 色セット
+  var strokeColor = filled ? '#555' : (isCat ? '#a03cdc' : '#338866');
+  var bodyFill  = filled ? '#2e2e2e' : (m.colors ? (m.colors.base  || '#6a8fa0') : '#6a8fa0');
+  var bellyCol  = filled ? '#2e2e2e' : (m.colors ? (m.colors.belly || '#e8e8e0') : '#e8e8e0');
+  var backCol   = filled ? '#2e2e2e' : (m.colors ? (m.colors.back  || '#223344') : '#223344');
+  var finFill   = filled ? '#3a3a3a' : (m.colors ? (m.colors.fins  || '#557788') : '#557788');
+  var eyeColor  = filled ? '#222'    : (m.colors ? (m.colors.eye   || '#111111') : '#111111');
 
-  // --- ボディ楕円ベース (cx=w*0.42, cy=h*0.50) ---
-  var cx = w * 0.42;
-  var cy = h * 0.50;
-  var rx = w * 0.34;
-  var ry = h * (bodyH * 1.6);
-  if (ry < 8) ry = 8;
+  var gid = 'fg-' + (species ? species.id : 'unk') + '-' + (filled ? 'u' : 'k');
+  var gidFin = gid + 'f';
 
-  // profile別調整
-  if (profile === 'deep') { ry *= 1.3; rx *= 0.9; }
-  if (profile === 'slender') { ry *= 0.55; rx *= 1.0; }
-  if (profile === 'flat') { ry *= 0.75; }
-  if (profile === 'eel') { rx *= 1.2; ry *= 0.45; }
-  if (profile === 'round') { ry *= 1.15; rx *= 0.88; }
-  if (profile === 'squid') { ry *= 1.1; rx *= 0.8; }
+  // ---- ヘルパー ----
+  function f(n) { return Math.round(n * 10) / 10; }
+  function pt(x, y) { return f(x) + ',' + f(y); }
 
-  // 吻
-  var snoutX = cx + rx + (profile === 'slender' ? w * 0.18 : w * 0.06);
-  var snoutY = cy;
-
-  // 尾部基点
-  var tailBaseX = cx - rx;
-
-  // 尾ひれ
-  var tailPath = '';
+  // =====================================================================
+  // SQUID — イカ型
+  // =====================================================================
   if (profile === 'squid') {
-    // イカっぽい
-    var t1x = tailBaseX - w * 0.15;
-    var t1ya = cy - ry * 0.6;
-    var t1yb = cy + ry * 0.6;
-    tailPath = 'M ' + tailBaseX + ' ' + (cy - ry * 0.3)
-      + ' Q ' + (tailBaseX - w*0.10) + ' ' + t1ya + ' ' + t1x + ' ' + t1ya
-      + ' L ' + t1x + ' ' + t1yb
-      + ' Q ' + (tailBaseX - w*0.10) + ' ' + t1yb + ' ' + tailBaseX + ' ' + (cy + ry * 0.3)
+    // 外套: 中央右に縦長の流線型
+    var mx = w * 0.52;
+    var my = h * 0.50;
+    var mw = w * 0.32;  // 半幅
+    var mh = h * 0.40;  // 半高
+    // 外套パス: 頭側(右)→先端三角(左)
+    // 右(前端)は丸め、左(後端)は尖る
+    var mRx = mx + mw;
+    var mLx = mx - mw;
+    var mTop = my - mh;
+    var mBot = my + mh;
+    // 三角ひれ
+    var finW = mw * 0.55;
+    var finH = mh * 0.50;
+    var mantlePath =
+      'M ' + f(mRx) + ' ' + f(my)
+      + ' C ' + f(mRx) + ',' + f(my - mh*0.65) + ' ' + f(mx + mw*0.5) + ',' + f(mTop) + ' ' + f(mx) + ',' + f(mTop)
+      + ' C ' + f(mx - mw*0.6) + ',' + f(mTop) + ' ' + f(mLx) + ',' + f(my - mh*0.3) + ' ' + f(mLx) + ',' + f(my)
+      + ' C ' + f(mLx) + ',' + f(my + mh*0.3) + ' ' + f(mx - mw*0.6) + ',' + f(mBot) + ' ' + f(mx) + ',' + f(mBot)
+      + ' C ' + f(mx + mw*0.5) + ',' + f(mBot) + ' ' + f(mRx) + ',' + f(my + mh*0.65) + ' ' + f(mRx) + ',' + f(my)
       + ' Z';
-  } else if (tail === 'forked' || tail === 'lunate') {
-    var spread = (tail === 'lunate') ? ry * 1.0 : ry * 0.75;
-    var notchX = tailBaseX - w * 0.08;
-    var tipX   = tailBaseX - w * (tail === 'lunate' ? 0.18 : 0.14);
-    tailPath = 'M ' + tailBaseX + ' ' + cy
-      + ' Q ' + notchX + ' ' + (cy - spread * 0.5) + ' ' + tipX + ' ' + (cy - spread)
-      + ' Q ' + (tailBaseX - w*0.04) + ' ' + cy + ' ' + tailBaseX + ' ' + cy
-      + ' Q ' + (tailBaseX - w*0.04) + ' ' + cy + ' ' + tipX + ' ' + (cy + spread)
-      + ' Q ' + notchX + ' ' + (cy + spread * 0.5) + ' ' + tailBaseX + ' ' + cy
+    // 三角ひれ(後端両側)
+    var fintPath =
+      'M ' + f(mLx + mw*0.2) + ',' + f(mTop + mh*0.3)
+      + ' L ' + f(mLx - finW*0.5) + ',' + f(mTop)
+      + ' L ' + f(mLx) + ',' + f(my - mh*0.1)
+      + ' Z'
+      + ' M ' + f(mLx + mw*0.2) + ',' + f(mBot - mh*0.3)
+      + ' L ' + f(mLx - finW*0.5) + ',' + f(mBot)
+      + ' L ' + f(mLx) + ',' + f(my + mh*0.1)
       + ' Z';
-  } else if (tail === 'rounded') {
-    var tipXr = tailBaseX - w * 0.10;
-    tailPath = 'M ' + tailBaseX + ' ' + (cy - ry * 0.6)
-      + ' Q ' + tipXr + ' ' + cy + ' ' + tailBaseX + ' ' + (cy + ry * 0.6)
-      + ' Z';
-  } else if (tail === 'pointed') {
-    var tipXp = tailBaseX - w * 0.14;
-    tailPath = 'M ' + tailBaseX + ' ' + (cy - ry * 0.4)
-      + ' L ' + tipXp + ' ' + cy
-      + ' L ' + tailBaseX + ' ' + (cy + ry * 0.4)
-      + ' Z';
-  } else {
-    // truncate
-    tailPath = 'M ' + tailBaseX + ' ' + (cy - ry * 0.65)
-      + ' L ' + (tailBaseX - w*0.06) + ' ' + (cy - ry * 0.7)
-      + ' L ' + (tailBaseX - w*0.06) + ' ' + (cy + ry * 0.7)
-      + ' L ' + tailBaseX + ' ' + (cy + ry * 0.65)
-      + ' Z';
+    // 脚束: 外套右端から8本
+    var legBaseX = mRx - mw * 0.05;
+    var legSpacing = mh * 0.18;
+    var legs = '';
+    for (var li = 0; li < 8; li++) {
+      var legY0 = my + (li - 3.5) * legSpacing;
+      var legLen = (li === 3 || li === 4) ? mw * 0.85 : mw * 0.60;
+      var legCurve = (li < 4) ? -legLen * 0.2 : legLen * 0.2;
+      legs += '<path d="M ' + f(legBaseX) + ',' + f(legY0)
+        + ' Q ' + f(legBaseX + legLen*0.5) + ',' + f(legY0 + legCurve)
+        + ' ' + f(legBaseX + legLen) + ',' + f(legY0 + legCurve * 1.5)
+        + '" fill="none" stroke="' + finFill + '" stroke-width="1" opacity="0.85"/>';
+    }
+    // 目(外套前部左右)
+    var eyeRsq = Math.max(2.5, mh * 0.20);
+    var eyeXsq = mRx - mw * 0.55;
+    var svgSq = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">'
+      + '<defs>'
+      + '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="' + backCol + '"/>'
+      + '<stop offset="55%" stop-color="' + bodyFill + '"/>'
+      + '<stop offset="100%" stop-color="' + bellyCol + '"/>'
+      + '</linearGradient></defs>'
+      + '<path d="' + fintPath + '" fill="' + finFill + '" stroke="' + strokeColor + '" stroke-width="0.7" opacity="0.85"/>'
+      + '<path d="' + mantlePath + '" fill="url(#' + gid + ')" stroke="' + strokeColor + '" stroke-width="0.9"/>'
+      + legs;
+    if (!filled) {
+      svgSq += '<circle cx="' + f(eyeXsq) + '" cy="' + f(my - mh*0.22) + '" r="' + f(eyeRsq) + '" fill="' + eyeColor + '"/>'
+        + '<circle cx="' + f(eyeXsq - eyeRsq*0.28) + '" cy="' + f(my - mh*0.22 - eyeRsq*0.28) + '" r="' + f(eyeRsq*0.28) + '" fill="rgba(255,255,255,0.65)"/>';
+    }
+    svgSq += '</svg>';
+    return svgSq;
   }
 
-  // 背びれ(簡易)
-  var dorsalPath = '';
-  if (profile !== 'eel' && profile !== 'squid') {
-    var dsx = cx + rx * 0.4;
-    var dex = cx - rx * 0.1;
-    var dTop = cy - ry - h * 0.14;
-    dorsalPath = 'M ' + dsx + ' ' + (cy - ry * 0.85)
-      + ' Q ' + ((dsx+dex)/2) + ' ' + dTop + ' ' + dex + ' ' + (cy - ry * 0.75)
+  // =====================================================================
+  // EEL — 細長いS字体型 (タチウオ・アナゴ・ウツボ等)
+  // =====================================================================
+  if (profile === 'eel') {
+    // 胴体は細長い帯状の多角形。S字のうねりを表現
+    var ew = w * 0.92;
+    var eh = h * 0.22;  // 半高
+    var ecx = w * 0.50;
+    var ecy = h * 0.50;
+    // 口先(右端)から尾(左端)へS字
+    var eRx = ecx + ew * 0.46;
+    var eLx = ecx - ew * 0.46;
+    // S字の振れ: 前半は上、後半は下(軽め)
+    var sMid1x = ecx + ew * 0.12;
+    var sMid2x = ecx - ew * 0.12;
+    var sAmp = eh * 0.6; // 振れ幅
+    // 背側パス
+    var eelBody =
+      'M ' + f(eRx) + ',' + f(ecy)
+      + ' C ' + f(eRx - ew*0.07) + ',' + f(ecy - eh*0.5)
+      + ' ' + f(sMid1x + ew*0.1) + ',' + f(ecy - eh - sAmp*0.6)
+      + ' ' + f(sMid1x) + ',' + f(ecy - eh)
+      + ' C ' + f(sMid1x - ew*0.12) + ',' + f(ecy - eh + sAmp*0.5)
+      + ' ' + f(sMid2x + ew*0.05) + ',' + f(ecy - eh*0.2 + sAmp*0.4)
+      + ' ' + f(eLx + ew*0.05) + ',' + f(ecy - eh*0.3)
+      + ' L ' + f(eLx) + ',' + f(ecy)
+      // 腹側(逆方向)
+      + ' C ' + f(eLx + ew*0.05) + ',' + f(ecy + eh*0.3)
+      + ' ' + f(sMid2x + ew*0.05) + ',' + f(ecy + eh*0.2 - sAmp*0.4)
+      + ' ' + f(sMid2x) + ',' + f(ecy + eh)
+      + ' C ' + f(sMid2x + ew*0.08) + ',' + f(ecy + eh - sAmp*0.5)
+      + ' ' + f(sMid1x) + ',' + f(ecy + eh)
+      + ' ' + f(sMid1x) + ',' + f(ecy + eh)
+      + ' C ' + f(sMid1x + ew*0.12) + ',' + f(ecy + eh*0.5)
+      + ' ' + f(eRx - ew*0.07) + ',' + f(ecy + eh*0.5)
+      + ' ' + f(eRx) + ',' + f(ecy)
       + ' Z';
+    // 背びれ(長い)
+    var eelDorsal = 'M ' + f(eRx - ew*0.08) + ',' + f(ecy - eh*0.9)
+      + ' Q ' + f(ecx) + ',' + f(ecy - eh - h*0.12)
+      + ' ' + f(eLx + ew*0.08) + ',' + f(ecy - eh*0.9);
+    // 目(右端に近い位置)
+    var eelEyeX = eRx - ew * 0.07;
+    var eelEyeY = ecy - eh * 0.25;
+    var eelEyeR = Math.max(2, eh * 0.30);
+
+    var svgEel = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">'
+      + '<defs>'
+      + '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="' + backCol + '"/>'
+      + '<stop offset="50%" stop-color="' + bodyFill + '"/>'
+      + '<stop offset="100%" stop-color="' + bellyCol + '"/>'
+      + '</linearGradient></defs>'
+      + '<path d="' + eelDorsal + '" fill="none" stroke="' + finFill + '" stroke-width="1.5" opacity="0.75"/>'
+      + '<path d="' + eelBody + '" fill="url(#' + gid + ')" stroke="' + strokeColor + '" stroke-width="0.9"/>';
+    if (!filled) {
+      svgEel += '<circle cx="' + f(eelEyeX) + '" cy="' + f(eelEyeY) + '" r="' + f(eelEyeR) + '" fill="' + eyeColor + '"/>'
+        + '<circle cx="' + f(eelEyeX - eelEyeR*0.3) + '" cy="' + f(eelEyeY - eelEyeR*0.3) + '" r="' + f(eelEyeR*0.28) + '" fill="rgba(255,255,255,0.65)"/>';
+    }
+    svgEel += '</svg>';
+    return svgEel;
   }
 
-  // 目
-  var eyeRad = Math.max(2.5, ry * 0.18);
-  var eyeX   = cx + rx * 0.55;
-  var eyeY   = cy - ry * 0.12;
+  // =====================================================================
+  // FLAT — ヒラメ・エイ型 (横から見た扁平魚)
+  // =====================================================================
+  if (profile === 'flat') {
+    // 横長の菱形に近い形、前後に丸みを持たせる
+    var fcx = w * 0.48;
+    var fcy = h * 0.52;
+    var frx = w * 0.42;  // 横方向
+    var fry = h * 0.34;  // 縦方向(薄い)
+    // 口先(右)は少し尖る、尾(左)も尖る
+    var fHead = fcx + frx;
+    var fTail = fcx - frx;
+    var fTop = fcy - fry;
+    var fBot = fcy + fry;
+    // 上輪郭: 右→背中高み(少し前より)→左
+    // 下輪郭: 左→腹→右
+    var flatBody =
+      'M ' + f(fHead) + ',' + f(fcy)
+      + ' C ' + f(fHead - frx*0.12) + ',' + f(fcy - fry*0.7)
+      + ' ' + f(fcx + frx*0.25) + ',' + f(fTop)
+      + ' ' + f(fcx - frx*0.1) + ',' + f(fTop)
+      + ' C ' + f(fcx - frx*0.55) + ',' + f(fTop)
+      + ' ' + f(fTail + frx*0.08) + ',' + f(fcy - fry*0.4)
+      + ' ' + f(fTail) + ',' + f(fcy)
+      + ' C ' + f(fTail + frx*0.08) + ',' + f(fcy + fry*0.4)
+      + ' ' + f(fcx - frx*0.55) + ',' + f(fBot)
+      + ' ' + f(fcx - frx*0.1) + ',' + f(fBot)
+      + ' C ' + f(fcx + frx*0.25) + ',' + f(fBot)
+      + ' ' + f(fHead - frx*0.12) + ',' + f(fcy + fry*0.7)
+      + ' ' + f(fHead) + ',' + f(fcy)
+      + ' Z';
+    // 目2つ(上面左右)
+    var fEyeR = Math.max(2, fry * 0.22);
+    var fEye1x = fcx + frx * 0.38;
+    var fEye2x = fcx + frx * 0.18;
+    var fEyeY = fcy - fry * 0.45;
+    // 背びれ(上縁に沿った細い突起)
+    var fDorsal = 'M ' + f(fHead - frx*0.22) + ',' + f(fTop + fry*0.1)
+      + ' Q ' + f(fcx) + ',' + f(fTop - h*0.08)
+      + ' ' + f(fTail + frx*0.20) + ',' + f(fTop + fry*0.1);
+    // 尾ひれ
+    var fTailSpread = fry * 0.85;
+    var fTailPath = 'M ' + f(fTail) + ',' + f(fcy - fry*0.3)
+      + ' C ' + f(fTail - frx*0.14) + ',' + f(fcy - fTailSpread)
+      + ' ' + f(fTail - frx*0.14) + ',' + f(fcy - fTailSpread)
+      + ' ' + f(fTail - frx*0.22) + ',' + f(fcy - fTailSpread * 0.85)
+      + ' M ' + f(fTail - frx*0.22) + ',' + f(fcy - fTailSpread * 0.85)
+      + ' C ' + f(fTail - frx*0.1) + ',' + f(fcy - fTailSpread*0.2)
+      + ' ' + f(fTail - frx*0.1) + ',' + f(fcy + fTailSpread*0.2)
+      + ' ' + f(fTail - frx*0.22) + ',' + f(fcy + fTailSpread * 0.85)
+      + ' M ' + f(fTail - frx*0.22) + ',' + f(fcy + fTailSpread * 0.85)
+      + ' C ' + f(fTail - frx*0.14) + ',' + f(fcy + fTailSpread)
+      + ' ' + f(fTail - frx*0.14) + ',' + f(fcy + fTailSpread)
+      + ' ' + f(fTail) + ',' + f(fcy + fry*0.3);
 
-  // bodyパス (滑らかな楕円を cubic bezier で描く)
-  var kappa = 0.5523;
-  var bLeft  = cx - rx;
-  var bRight = cx + rx;
-  var bTop   = cy - ry;
-  var bBot   = cy + ry;
-  // 四隅制御点
-  var cpH = rx * kappa;
-  var cpV = ry * kappa;
+    var svgFlat = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">'
+      + '<defs>'
+      + '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="' + backCol + '"/>'
+      + '<stop offset="60%" stop-color="' + bodyFill + '"/>'
+      + '<stop offset="100%" stop-color="' + bellyCol + '"/>'
+      + '</linearGradient></defs>'
+      + '<path d="' + fDorsal + '" fill="none" stroke="' + finFill + '" stroke-width="1.2" opacity="0.8"/>'
+      + '<path d="' + flatBody + '" fill="url(#' + gid + ')" stroke="' + strokeColor + '" stroke-width="0.9"/>'
+      + '<path d="' + fTailPath + '" fill="none" stroke="' + finFill + '" stroke-width="1.5" opacity="0.85"/>';
+    if (!filled) {
+      svgFlat += '<circle cx="' + f(fEye1x) + '" cy="' + f(fEyeY) + '" r="' + f(fEyeR) + '" fill="' + eyeColor + '"/>'
+        + '<circle cx="' + f(fEye1x - fEyeR*0.28) + '" cy="' + f(fEyeY - fEyeR*0.28) + '" r="' + f(fEyeR*0.28) + '" fill="rgba(255,255,255,0.65)"/>'
+        + '<circle cx="' + f(fEye2x) + '" cy="' + f(fEyeY) + '" r="' + f(fEyeR * 0.85) + '" fill="' + eyeColor + '"/>';
+    }
+    svgFlat += '</svg>';
+    return svgFlat;
+  }
+
+  // =====================================================================
+  // 通常の魚 (standard / deep / slender / round)
+  // 口先→背中の盛り上がり→尾柄のくびれ→尾びれ→腹→口先を3次ベジェで。
+  // =====================================================================
+
+  // キャンバス上での各寸法を計算
+  // 魚全体を w×h に収める。マージン少し確保。
+  var marginX = w * 0.04;
+  var marginY = h * 0.08;
+
+  // bodyH に応じて体高を決める
+  var bodyHpx; // 体の最大高さ(半値)
+  if (profile === 'deep')    { bodyHpx = h * 0.40; }
+  else if (profile === 'slender') { bodyHpx = h * 0.16; }
+  else if (profile === 'round')   { bodyHpx = h * 0.34; }
+  else { bodyHpx = h * (bodyH * 1.55 + 0.10); } // standard
+  bodyHpx = Math.min(bodyHpx, h * 0.46);
+  bodyHpx = Math.max(bodyHpx, h * 0.12);
+
+  // 横方向の主要X座標
+  var snoutShift = (m.snout === 'long') ? w * 0.09 : (m.snout === 'pointed' ? w * 0.04 : 0.0);
+  var xHead = w - marginX - snoutShift;  // 口先X
+  var xBodyMax = w * 0.62;               // 最大体高の位置
+  var xPeduncle = w * 0.20;             // 尾柄くびれ位置
+  var xTailBase = w * 0.12;             // 尾ひれ基部X
+
+  // Y基準: 画面中央より少し上(背びれが上へ出るため)
+  var cy = h * 0.52;
+
+  // 口先Y(吻の形によってわずかに異なる)
+  var snoutYOff = (m.snout === 'blunt') ? bodyHpx * 0.08 : 0;
+
+  // 尾柄のくびれ(体高の比)
+  var pedH = bodyHpx * 0.30;  // 尾柄半高
+
+  // ── ボディパス(背側→尾→腹側→口先) ──
+  // 背側: 口先→背中最高点→尾柄
+  var dorsalPeak = cy - bodyHpx;                  // 背中最高点Y
+  var dorsalPeakX = xBodyMax + (xHead - xBodyMax) * 0.15; // 少し前寄り
+
+  // 腹側の最低点
+  var ventPeak = cy + bodyHpx * 0.72;
+  var ventPeakX = xBodyMax - (xBodyMax - xTailBase) * 0.15;
+
+  // mouth Y (吻の中央)
+  var mouthY = cy + snoutYOff;
+
   var bodyPath =
-    'M ' + (cx + rx) + ' ' + cy
-    + ' C ' + (cx+rx) + ' ' + (cy-cpV) + ' ' + (cx+cpH) + ' ' + bTop + ' ' + cx + ' ' + bTop
-    + ' C ' + (cx-cpH) + ' ' + bTop + ' ' + bLeft + ' ' + (cy-cpV) + ' ' + bLeft + ' ' + cy
-    + ' C ' + bLeft + ' ' + (cy+cpV) + ' ' + (cx-cpH) + ' ' + bBot + ' ' + cx + ' ' + bBot
-    + ' C ' + (cx+cpH) + ' ' + bBot + ' ' + (cx+rx) + ' ' + (cy+cpV) + ' ' + (cx+rx) + ' ' + cy
+    // 口先へ
+    'M ' + f(xHead) + ',' + f(mouthY)
+    // 背側: 口先→背中の盛り上がり→尾柄
+    + ' C ' + f(xHead - (xHead-xBodyMax)*0.30) + ',' + f(cy - bodyHpx * 0.55)
+    + ' '   + f(dorsalPeakX) + ',' + f(dorsalPeak)
+    + ' '   + f(xBodyMax) + ',' + f(dorsalPeak + bodyHpx*0.05)
+    + ' C ' + f(xBodyMax - (xBodyMax-xPeduncle)*0.35) + ',' + f(cy - bodyHpx * 0.60)
+    + ' '   + f(xPeduncle + (xBodyMax-xPeduncle)*0.25) + ',' + f(cy - pedH * 1.2)
+    + ' '   + f(xPeduncle) + ',' + f(cy - pedH)
+    // 尾柄から尾ひれ基部へ
+    + ' C ' + f(xPeduncle - (xPeduncle-xTailBase)*0.55) + ',' + f(cy - pedH * 0.9)
+    + ' '   + f(xTailBase + (xPeduncle-xTailBase)*0.2) + ',' + f(cy - pedH * 0.6)
+    + ' '   + f(xTailBase) + ',' + f(cy);
+
+  // ── 尾ひれ ──
+  var tailSpread, tailTipX, notchX;
+  var tailPaths = '';
+
+  if (tail === 'forked') {
+    tailSpread = bodyHpx * 0.82;
+    tailTipX   = xTailBase - w * 0.14;
+    notchX     = xTailBase - w * 0.06;
+    // 上葉
+    tailPaths +=
+      ' L ' + f(xTailBase) + ',' + f(cy - pedH * 0.4)
+      + ' C ' + f(notchX) + ',' + f(cy - tailSpread*0.35)
+      + ' '   + f(tailTipX + w*0.03) + ',' + f(cy - tailSpread*0.75)
+      + ' '   + f(tailTipX) + ',' + f(cy - tailSpread)
+      // 切れ込み
+      + ' C ' + f(tailTipX + w*0.04) + ',' + f(cy - tailSpread*0.55)
+      + ' '   + f(xTailBase - w*0.03) + ',' + f(cy - pedH*0.15)
+      + ' '   + f(xTailBase) + ',' + f(cy)
+      // 下葉
+      + ' C ' + f(xTailBase - w*0.03) + ',' + f(cy + pedH*0.15)
+      + ' '   + f(tailTipX + w*0.04) + ',' + f(cy + tailSpread*0.55)
+      + ' '   + f(tailTipX) + ',' + f(cy + tailSpread)
+      + ' C ' + f(tailTipX + w*0.03) + ',' + f(cy + tailSpread*0.75)
+      + ' '   + f(notchX) + ',' + f(cy + tailSpread*0.35)
+      + ' '   + f(xTailBase) + ',' + f(cy + pedH*0.4);
+  } else if (tail === 'lunate') {
+    // 三日月形: 深く切れ込む
+    tailSpread = bodyHpx * 1.0;
+    tailTipX   = xTailBase - w * 0.20;
+    var lNotchX = xTailBase - w * 0.04;
+    tailPaths +=
+      ' L ' + f(xTailBase) + ',' + f(cy - pedH * 0.5)
+      + ' C ' + f(lNotchX) + ',' + f(cy - tailSpread*0.4)
+      + ' '   + f(tailTipX + w*0.04) + ',' + f(cy - tailSpread*0.72)
+      + ' '   + f(tailTipX) + ',' + f(cy - tailSpread)
+      + ' C ' + f(tailTipX + w*0.06) + ',' + f(cy - tailSpread*0.5)
+      + ' '   + f(lNotchX - w*0.01) + ',' + f(cy - pedH * 0.08)
+      + ' '   + f(xTailBase) + ',' + f(cy)
+      + ' C ' + f(lNotchX - w*0.01) + ',' + f(cy + pedH * 0.08)
+      + ' '   + f(tailTipX + w*0.06) + ',' + f(cy + tailSpread*0.5)
+      + ' '   + f(tailTipX) + ',' + f(cy + tailSpread)
+      + ' C ' + f(tailTipX + w*0.04) + ',' + f(cy + tailSpread*0.72)
+      + ' '   + f(lNotchX) + ',' + f(cy + tailSpread*0.4)
+      + ' '   + f(xTailBase) + ',' + f(cy + pedH * 0.5);
+  } else if (tail === 'rounded') {
+    tailSpread = bodyHpx * 0.72;
+    tailTipX   = xTailBase - w * 0.12;
+    tailPaths +=
+      ' L ' + f(xTailBase) + ',' + f(cy - pedH * 0.55)
+      + ' C ' + f(tailTipX + w*0.04) + ',' + f(cy - tailSpread*0.55)
+      + ' '   + f(tailTipX) + ',' + f(cy - tailSpread * 0.3)
+      + ' '   + f(tailTipX) + ',' + f(cy)
+      + ' C ' + f(tailTipX) + ',' + f(cy + tailSpread * 0.3)
+      + ' '   + f(tailTipX + w*0.04) + ',' + f(cy + tailSpread*0.55)
+      + ' '   + f(xTailBase) + ',' + f(cy + pedH * 0.55);
+  } else if (tail === 'pointed') {
+    tailSpread = bodyHpx * 0.52;
+    tailTipX   = xTailBase - w * 0.16;
+    tailPaths +=
+      ' L ' + f(xTailBase) + ',' + f(cy - pedH * 0.45)
+      + ' C ' + f(xTailBase - w*0.05) + ',' + f(cy - tailSpread*0.5)
+      + ' '   + f(tailTipX + w*0.06) + ',' + f(cy - tailSpread*0.5)
+      + ' '   + f(tailTipX) + ',' + f(cy)
+      + ' C ' + f(tailTipX + w*0.06) + ',' + f(cy + tailSpread*0.5)
+      + ' '   + f(xTailBase - w*0.05) + ',' + f(cy + tailSpread*0.5)
+      + ' '   + f(xTailBase) + ',' + f(cy + pedH * 0.45);
+  } else {
+    // truncate: まっすぐ切れた尾
+    tailSpread = bodyHpx * 0.70;
+    tailTipX   = xTailBase - w * 0.07;
+    tailPaths +=
+      ' L ' + f(xTailBase) + ',' + f(cy - pedH * 0.52)
+      + ' L ' + f(tailTipX) + ',' + f(cy - tailSpread)
+      + ' L ' + f(tailTipX) + ',' + f(cy + tailSpread)
+      + ' L ' + f(xTailBase) + ',' + f(cy + pedH * 0.52);
+  }
+
+  // 腹側: 尾ひれ基部→腹の丸み→口先
+  bodyPath += tailPaths
+    + ' C ' + f(xTailBase + (xPeduncle-xTailBase)*0.2) + ',' + f(cy + pedH * 0.6)
+    + ' '   + f(xPeduncle - (xPeduncle-xTailBase)*0.25) + ',' + f(cy + pedH * 1.2)
+    + ' '   + f(xPeduncle) + ',' + f(cy + pedH)
+    + ' C ' + f(xPeduncle + (xBodyMax-xPeduncle)*0.30) + ',' + f(cy + bodyHpx * 0.62)
+    + ' '   + f(ventPeakX) + ',' + f(ventPeak)
+    + ' '   + f(xBodyMax) + ',' + f(ventPeak - bodyHpx*0.05)
+    + ' C ' + f(xBodyMax + (xHead-xBodyMax)*0.30) + ',' + f(cy + bodyHpx * 0.55)
+    + ' '   + f(xHead - (xHead-xBodyMax)*0.28) + ',' + f(mouthY + bodyHpx * 0.30)
+    + ' '   + f(xHead) + ',' + f(mouthY)
     + ' Z';
 
-  // eel はもっと細長い特有形状
-  if (profile === 'eel') {
-    bodyPath =
-      'M ' + (cx + rx) + ' ' + cy
-      + ' Q ' + (cx + rx*0.6) + ' ' + (cy - ry) + ' ' + cx + ' ' + (cy - ry)
-      + ' Q ' + (cx - rx*0.5) + ' ' + (cy - ry) + ' ' + (cx - rx) + ' ' + cy
-      + ' Q ' + (cx - rx*0.5) + ' ' + (cy + ry) + ' ' + cx + ' ' + (cy + ry)
-      + ' Q ' + (cx + rx*0.6) + ' ' + (cy + ry) + ' ' + (cx + rx) + ' ' + cy
-      + ' Z';
+  // ── 背鰭 (dorsal) ──
+  var dorsalSVG = '';
+  var dStart = m.dorsal ? m.dorsal.start : 0.28;
+  var dEnd   = m.dorsal ? m.dorsal.end   : 0.62;
+  var dH     = m.dorsal ? m.dorsal.h     : 0.10;
+  var spiny  = m.dorsal ? m.dorsal.spiny : false;
+  // 背鰭のX座標: 体長割合を画面座標に変換(右が口先=1.0、左が尾=0.0)
+  var bodyLen = xHead - xTailBase;
+  var dxStart = xTailBase + bodyLen * (1.0 - dEnd);
+  var dxEnd   = xTailBase + bodyLen * (1.0 - dStart);
+  var dxMid   = (dxStart + dxEnd) * 0.5;
+  var dTopY   = dorsalPeak - h * dH * 0.8;
+  // 背鰭基部Y(背中ライン上)
+  var dBaseY  = dorsalPeak + bodyHpx * 0.06;
+  dorsalSVG =
+    'M ' + f(dxEnd) + ',' + f(dBaseY)
+    + ' C ' + f(dxEnd - (dxEnd-dxMid)*0.3) + ',' + f(dBaseY - h*dH*0.5)
+    + ' '   + f(dxMid + (dxEnd-dxMid)*0.2) + ',' + f(dTopY + h*dH*0.1)
+    + ' '   + f(dxMid) + ',' + f(dTopY)
+    + ' C ' + f(dxMid - (dxMid-dxStart)*0.2) + ',' + f(dTopY + h*dH*0.1)
+    + ' '   + f(dxStart + (dxMid-dxStart)*0.3) + ',' + f(dBaseY - h*dH*0.4)
+    + ' '   + f(dxStart) + ',' + f(dBaseY)
+    + ' Z';
+
+  // 棘条(spiny)があれば細い縦線を数本追加
+  var spinySVG = '';
+  if (spiny && !filled) {
+    var spineCount = 5;
+    for (var si = 0; si < spineCount; si++) {
+      var sxRatio = (si + 0.5) / spineCount;
+      var sx = dxEnd + (dxStart - dxEnd) * sxRatio;
+      var sTopY2 = dTopY + (dxMid - sx) * (dxMid - sx) / (bodyLen * bodyLen * 0.04) * h * dH * 0.5;
+      var sBaseY2 = dBaseY;
+      spiny && (spinySVG += '<line x1="' + f(sx) + '" y1="' + f(sBaseY2) + '" x2="' + f(sx) + '" y2="' + f(sTopY2 + h*dH*0.12) + '" stroke="' + finFill + '" stroke-width="0.5" opacity="0.6"/>');
+    }
   }
 
-  var bodyFill = filled ? '#3a3a3a' : fillColor;
-  var belly    = filled ? '#3a3a3a' : (m.colors ? (m.colors.belly || '#dde') : '#dde');
-  var backCol  = filled ? '#3a3a3a' : (m.colors ? (m.colors.back  || '#223344') : '#223344');
-  var finFill  = filled ? '#444'    : (m.colors ? (m.colors.fins  || '#557788') : '#557788');
+  // ── 臀鰭 (anal) ──
+  var analSVG = '';
+  var aStart = m.anal ? m.anal.start : 0.60;
+  var aEnd   = m.anal ? m.anal.end   : 0.78;
+  var aH     = m.anal ? m.anal.h     : 0.07;
+  var axStart = xTailBase + bodyLen * (1.0 - aEnd);
+  var axEnd   = xTailBase + bodyLen * (1.0 - aStart);
+  var axMid   = (axStart + axEnd) * 0.5;
+  var aBaseY  = ventPeak - bodyHpx * 0.05;
+  var aBotY   = aBaseY + h * aH * 0.75;
+  analSVG =
+    'M ' + f(axEnd) + ',' + f(aBaseY)
+    + ' C ' + f(axMid + (axEnd-axMid)*0.2) + ',' + f(aBotY - h*aH*0.1)
+    + ' '   + f(axMid) + ',' + f(aBotY)
+    + ' '   + f(axStart) + ',' + f(aBaseY)
+    + ' Z';
 
-  // グラデーション ID (衝突防止)
-  var gid = 'fish-g-' + (species ? species.id : 'unk') + '-' + (filled ? 'u' : 'k');
+  // ── 胸鰭 (pectoral) ──
+  var pectoralSVG = '';
+  var pSize = m.pectoral !== undefined ? m.pectoral : 0.16;
+  var pBaseX = xTailBase + bodyLen * 0.72;
+  var pBaseY = cy - bodyHpx * 0.05;
+  var pLen   = bodyHpx * pSize * 3.5;
+  var pSpread = bodyHpx * 0.35;
+  pectoralSVG =
+    'M ' + f(pBaseX) + ',' + f(pBaseY)
+    + ' C ' + f(pBaseX - pLen*0.3) + ',' + f(pBaseY - pSpread*0.4)
+    + ' '   + f(pBaseX - pLen*0.7) + ',' + f(pBaseY + pSpread*0.3)
+    + ' '   + f(pBaseX - pLen) + ',' + f(pBaseY + pSpread * 0.6)
+    + ' C ' + f(pBaseX - pLen*0.65) + ',' + f(pBaseY + pSpread)
+    + ' '   + f(pBaseX - pLen*0.3) + ',' + f(pBaseY + pSpread * 0.5)
+    + ' '   + f(pBaseX) + ',' + f(pBaseY)
+    + ' Z';
 
+  // ── 目 ──
+  var eyeR  = Math.max(2.5, bodyHpx * 0.175);
+  var eyeX  = xTailBase + bodyLen * 0.82;
+  var eyeY  = cy - bodyHpx * 0.22;
+  // 吻が長い魚は目を前寄りに
+  if (m.snout === 'long') { eyeX += bodyLen * 0.03; }
+
+  // ── SVG組み立て ──
   var svgStr =
     '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">'
     + '<defs>'
     + '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">'
     + '<stop offset="0%" stop-color="' + backCol + '"/>'
-    + '<stop offset="60%" stop-color="' + bodyFill + '"/>'
-    + '<stop offset="100%" stop-color="' + belly + '"/>'
+    + '<stop offset="55%" stop-color="' + bodyFill + '"/>'
+    + '<stop offset="100%" stop-color="' + bellyCol + '"/>'
+    + '</linearGradient>'
+    + '<linearGradient id="' + gidFin + '" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0%" stop-color="' + finFill + '" stop-opacity="0.9"/>'
+    + '<stop offset="100%" stop-color="' + finFill + '" stop-opacity="0.5"/>'
     + '</linearGradient>'
     + '</defs>';
 
-  // 尾ひれ
-  if (tailPath) {
-    svgStr += '<path d="' + tailPath + '" fill="' + finFill + '" stroke="' + strokeColor + '" stroke-width="0.8" opacity="0.9"/>';
-  }
-  // 背びれ
-  if (dorsalPath) {
-    svgStr += '<path d="' + dorsalPath + '" fill="' + finFill + '" stroke="' + strokeColor + '" stroke-width="0.8" opacity="0.8"/>';
-  }
+  // 胸鰭(体の下レイヤ)
+  svgStr += '<path d="' + pectoralSVG + '" fill="url(#' + gidFin + ')" stroke="' + strokeColor + '" stroke-width="0.6" opacity="0.8"/>';
+  // 臀鰭
+  svgStr += '<path d="' + analSVG + '" fill="url(#' + gidFin + ')" stroke="' + strokeColor + '" stroke-width="0.6" opacity="0.8"/>';
   // ボディ
-  svgStr += '<path d="' + bodyPath + '" fill="url(#' + gid + ')" stroke="' + strokeColor + '" stroke-width="1"/>';
+  svgStr += '<path d="' + bodyPath + '" fill="url(#' + gid + ')" stroke="' + strokeColor + '" stroke-width="0.9"/>';
+  // 背鰭
+  svgStr += '<path d="' + dorsalSVG + '" fill="url(#' + gidFin + ')" stroke="' + strokeColor + '" stroke-width="0.7" opacity="0.9"/>';
+  svgStr += spinySVG;
 
   // 目
   if (!filled) {
-    var eyeColor = m.colors ? (m.colors.eye || '#111') : '#111';
-    svgStr += '<circle cx="' + eyeX + '" cy="' + eyeY + '" r="' + eyeRad + '" fill="' + eyeColor + '"/>'
-      + '<circle cx="' + (eyeX - eyeRad*0.3) + '" cy="' + (eyeY - eyeRad*0.3) + '" r="' + (eyeRad*0.28) + '" fill="rgba(255,255,255,0.7)"/>';
+    svgStr += '<circle cx="' + f(eyeX) + '" cy="' + f(eyeY) + '" r="' + f(eyeR) + '" fill="' + eyeColor + '"/>'
+      + '<circle cx="' + f(eyeX - eyeR*0.28) + '" cy="' + f(eyeY - eyeR*0.28) + '" r="' + f(eyeR*0.28) + '" fill="rgba(255,255,255,0.70)"/>';
   }
+
   svgStr += '</svg>';
   return svgStr;
 }
@@ -241,7 +577,7 @@ class UIController {
       '<div class="ui-title__logo-wrap">'
       + '<div class="ui-title__deco-line"></div>'
       + '<div class="ui-title__main">チヌ釣り三昧</div>'
-      + '<div class="ui-title__sub">〜磯の主を求めて〜</div>'
+      + '<div class="ui-title__sub"><span>〜</span><span>磯</span><span>の</span><span>主</span><span>を</span><span>求</span><span>め</span><span>て</span><span>〜</span></div>'
       + '<div class="ui-title__deco-line"></div>'
       + '</div>'
       + '<button class="ui-title__start-btn" id="ui-start-btn">釣りを始める</button>'
