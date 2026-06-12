@@ -5857,8 +5857,25 @@ class UIController {
     var eq = game.equipped;
     var rodEl  = this._get('ui-rod-name');
     var baitEl = this._get('ui-bait-name');
-    if (rodEl  && eq.rod)  rodEl.textContent  = eq.rod.name  || eq.rod.id  || '—';
-    if (baitEl && eq.bait) baitEl.textContent = eq.bait.name || eq.bait.id || '—';
+    // equipped.rod / bait は文字列ID。TACKLE_* から名前を引く
+    if (rodEl && eq.rod) {
+      var rodName = '—';
+      try {
+        for (var ri = 0; ri < TACKLE_RODS.length; ri++) {
+          if (TACKLE_RODS[ri].id === eq.rod) { rodName = TACKLE_RODS[ri].name; break; }
+        }
+      } catch(e) {}
+      rodEl.textContent = rodName;
+    }
+    if (baitEl && eq.bait) {
+      var baitName = eq.bait;
+      try {
+        for (var bi = 0; bi < TACKLE_BAITS.length; bi++) {
+          if (TACKLE_BAITS[bi].id === eq.bait) { baitName = TACKLE_BAITS[bi].name; break; }
+        }
+      } catch(e) {}
+      baitEl.textContent = baitName;
+    }
   }
 
   /* ===== 公開: showBite ===== */
@@ -6126,8 +6143,9 @@ class UIController {
 
     for (var i = 0; i < items.length; i++) {
       (function(item) {
-        var isEquipped = equipped[catKey] && equipped[catKey].id === item.id;
-        var isOwned    = tab === 'bait' ? true : ownedArr.some(function(o){ return o.id === item.id; });
+        // equipped[catKey] は文字列ID、owned配列も文字列ID配列
+        var isEquipped = equipped[catKey] === item.id;
+        var isOwned    = tab === 'bait' ? true : ownedArr.some(function(o){ return o === item.id; });
 
         var el = document.createElement('div');
         el.className = 'ui-tackle__item' + (isEquipped ? ' is-equipped' : '');
