@@ -1,0 +1,5187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>チヌ釣り三昧 〜磯の主を求めて〜</title>
+<style>
+/* ============================================================
+   チヌ釣り三昧 — 全スタイル
+   深紺 #101b2d / 生成り #f2ead8 / 朱 #cc3333
+   ============================================================ */
+
+/* ---------- リセット / ベース ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a1420;
+  color: #f2ead8;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+}
+
+/* ---------- z-index 設計 ---------- */
+/* canvas: 0 (renderer が append) */
+/* HUD:    10 */
+/* modal:  100 */
+
+#ui-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   タイトル画面
+   ============================================================ */
+.ui-title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #060e18 0%, #101b2d 60%, #1a2e44 100%);
+  z-index: 100;
+  pointer-events: auto;
+  gap: 0;
+}
+
+.ui-title__logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2.4rem;
+  text-shadow: 0 2px 24px rgba(0,0,0,0.8);
+}
+
+.ui-title__main {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "ヒラギノ明朝 ProN", serif;
+  font-size: clamp(2.4rem, 8vw, 5.2rem);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: #f2ead8;
+  line-height: 1.1;
+  background: linear-gradient(180deg, #f9f3e8 0%, #d4c090 50%, #a88040 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ui-title__sub {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: clamp(0.8rem, 2.2vw, 1.15rem);
+  letter-spacing: 0.3em;
+  color: #b0a888;
+  margin-top: 0.7rem;
+  opacity: 0.88;
+}
+
+.ui-title__deco-line {
+  width: clamp(160px, 40vw, 320px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c8a040, transparent);
+  margin: 0.6rem 0;
+}
+
+.ui-title__start-btn {
+  pointer-events: auto;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  letter-spacing: 0.3em;
+  color: #f2ead8;
+  background: rgba(16,27,45,0.7);
+  border: 1.5px solid #c8a040;
+  padding: 0.75em 2.5em;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  margin-top: 1.4rem;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  box-shadow: 0 0 18px rgba(200,160,64,0.12);
+}
+
+.ui-title__start-btn:hover {
+  background: #cc3333;
+  border-color: #cc3333;
+  color: #fff;
+  box-shadow: 0 0 28px rgba(204,51,51,0.4);
+}
+
+.ui-title__help {
+  margin-top: 2rem;
+  background: rgba(10,20,32,0.65);
+  border: 1px solid rgba(200,160,64,0.25);
+  border-radius: 6px;
+  padding: 1rem 1.6rem;
+  backdrop-filter: blur(8px);
+  max-width: min(88vw, 480px);
+  font-size: 0.82rem;
+  line-height: 1.8;
+  color: #c8c0a8;
+  text-align: left;
+}
+
+.ui-title__help h3 {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 0.95rem;
+  color: #f2ead8;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.12em;
+}
+
+.ui-title__help p {
+  margin-bottom: 0.2rem;
+}
+
+/* ============================================================
+   HUD — 全体
+   ============================================================ */
+.ui-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  display: none;
+}
+
+.ui-hud.is-active {
+  display: block;
+}
+
+/* ---------- 左上: 時刻・コイン ---------- */
+.ui-hud__topleft {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ui-hud__time-block,
+.ui-hud__coin-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(6,14,24,0.62);
+  border: 1px solid rgba(242,234,216,0.12);
+  border-radius: 20px;
+  padding: 4px 12px 4px 8px;
+  backdrop-filter: blur(6px);
+  font-size: 0.9rem;
+  color: #f2ead8;
+}
+
+.ui-hud__time-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.ui-hud__time-text {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  letter-spacing: 0.05em;
+  font-size: 0.88rem;
+}
+
+.ui-hud__coin-icon {
+  font-size: 1rem;
+}
+
+.ui-hud__coin-text {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- 右上: アイコンボタン群 ---------- */
+.ui-hud__topright {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.ui-hud__icon-btn {
+  pointer-events: auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(6,14,24,0.65);
+  border: 1px solid rgba(242,234,216,0.18);
+  color: #f2ead8;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.ui-hud__icon-btn:hover {
+  background: #cc3333;
+  border-color: #cc3333;
+}
+
+/* ---------- 左下: タックル ---------- */
+.ui-hud__tackle-info {
+  position: absolute;
+  bottom: 80px;
+  left: 12px;
+  background: rgba(6,14,24,0.60);
+  border: 1px solid rgba(242,234,216,0.10);
+  border-radius: 6px;
+  padding: 6px 12px;
+  backdrop-filter: blur(6px);
+  font-size: 0.76rem;
+  color: #b0a888;
+  line-height: 1.7;
+  max-width: 200px;
+}
+
+.ui-hud__tackle-info span {
+  color: #f2ead8;
+}
+
+/* ---------- 下中央: 状態テキスト ---------- */
+.ui-hud__status {
+  position: absolute;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: clamp(0.9rem, 2.5vw, 1.15rem);
+  letter-spacing: 0.18em;
+  color: #f2ead8;
+  text-shadow: 0 0 16px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.8);
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ui-hud__status.is-bite {
+  color: #ff4444;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  text-shadow: 0 0 24px rgba(255,68,68,0.7);
+}
+
+/* ---------- キャストメーター ---------- */
+.ui-hud__cast-meter {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, 70vw);
+  display: none;
+}
+
+.ui-hud__cast-meter.is-active {
+  display: block;
+}
+
+.ui-hud__cast-meter-label {
+  font-size: 0.72rem;
+  color: #b0a888;
+  text-align: center;
+  margin-bottom: 4px;
+  letter-spacing: 0.12em;
+}
+
+.ui-hud__cast-meter-track {
+  width: 100%;
+  height: 14px;
+  background: rgba(6,14,24,0.7);
+  border: 1px solid rgba(242,234,216,0.18);
+  border-radius: 7px;
+  overflow: hidden;
+  position: relative;
+}
+
+.ui-hud__cast-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 7px;
+  transition: background 0.1s;
+  background: linear-gradient(90deg, #22aa55, #aacc22, #cc3333);
+}
+
+/* ---------- テンションバー (ファイト中のみ) ---------- */
+.ui-hud__tension-panel {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.ui-hud__tension-panel.is-active {
+  display: flex;
+}
+
+.ui-hud__tension-label {
+  font-size: 0.68rem;
+  color: #b0a888;
+  letter-spacing: 0.08em;
+  writing-mode: vertical-rl;
+}
+
+.ui-hud__tension-track {
+  width: 18px;
+  height: 160px;
+  background: rgba(6,14,24,0.7);
+  border: 1px solid rgba(242,234,216,0.16);
+  border-radius: 9px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+}
+
+.ui-hud__tension-fill {
+  width: 100%;
+  height: 0%;
+  border-radius: 0 0 9px 9px;
+  background: #22bb55;
+  transition: height 0.08s linear, background 0.2s;
+}
+
+.ui-hud__tension-fill.is-warn {
+  background: #ddaa11;
+}
+
+.ui-hud__tension-fill.is-danger {
+  background: #cc3333;
+  animation: tension-blink 0.3s infinite alternate;
+}
+
+@keyframes tension-blink {
+  from { opacity: 1; }
+  to   { opacity: 0.35; }
+}
+
+.ui-hud__fish-distance {
+  font-size: 0.8rem;
+  color: #f2ead8;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.ui-hud__fish-distance small {
+  display: block;
+  font-size: 0.62rem;
+  color: #888;
+}
+
+.ui-hud__stamina-track {
+  width: 72px;
+  height: 8px;
+  background: rgba(6,14,24,0.7);
+  border: 1px solid rgba(242,234,216,0.16);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ui-hud__stamina-fill {
+  height: 100%;
+  background: #22aa66;
+  border-radius: 4px;
+  transition: width 0.1s;
+}
+
+.ui-hud__stamina-label {
+  font-size: 0.62rem;
+  color: #888;
+  text-align: center;
+}
+
+/* ============================================================
+   アタリ演出
+   ============================================================ */
+/* 前アタリ: ウキ周辺的な小演出 — 画面左下寄り */
+.ui-bite-minor {
+  position: absolute;
+  bottom: 30%;
+  left: 40%;
+  pointer-events: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.ui-bite-minor.is-active {
+  display: flex;
+}
+
+.ui-bite-minor__ripple {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid rgba(100,180,255,0.6);
+  animation: ripple-out 1.2s ease-out infinite;
+}
+
+.ui-bite-minor__ripple:nth-child(2) { animation-delay: 0.4s; }
+.ui-bite-minor__ripple:nth-child(3) { animation-delay: 0.8s; }
+
+@keyframes ripple-out {
+  from { transform: scale(0.2); opacity: 0.9; }
+  to   { transform: scale(2.8); opacity: 0; }
+}
+
+.ui-bite-minor__text {
+  position: relative;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 1.1rem;
+  color: #aaddff;
+  text-shadow: 0 0 8px rgba(100,200,255,0.8);
+  z-index: 1;
+  animation: minor-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes minor-pulse {
+  from { opacity: 0.5; transform: scale(0.95); }
+  to   { opacity: 1.0; transform: scale(1.05); }
+}
+
+/* 本アタリ: 大きな「!!」 + 赤フラッシュ */
+.ui-bite-major {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+}
+
+.ui-bite-major.is-active {
+  display: flex;
+  animation: major-flash 0.18s ease-out;
+}
+
+@keyframes major-flash {
+  0%  { background: rgba(200,30,30,0.55); }
+  100%{ background: rgba(200,30,30,0); }
+}
+
+.ui-bite-major__text {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: clamp(4rem, 14vw, 9rem);
+  font-weight: 700;
+  color: #ff2222;
+  text-shadow:
+    0 0 40px rgba(255,50,50,0.9),
+    0 0 80px rgba(255,50,50,0.5),
+    0 4px 12px rgba(0,0,0,0.9);
+  animation: major-zoom 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  letter-spacing: 0.05em;
+}
+
+@keyframes major-zoom {
+  from { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
+  to   { transform: scale(1.0) rotate(0deg); opacity: 1; }
+}
+
+/* ============================================================
+   釣果モーダル
+   ============================================================ */
+.ui-catch-modal {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: auto;
+  background: rgba(4,10,18,0.72);
+  backdrop-filter: blur(4px);
+}
+
+.ui-catch-modal.is-active {
+  display: flex;
+}
+
+.ui-catch-card {
+  position: relative;
+  width: min(480px, 90vw);
+  background: #f5ede0;
+  border-radius: 6px;
+  padding: 2rem 2.2rem 1.6rem;
+  color: #1a1410;
+  box-shadow:
+    0 0 0 1px rgba(160,120,40,0.4),
+    0 8px 48px rgba(0,0,0,0.7),
+    inset 0 0 60px rgba(220,200,160,0.18);
+  animation: card-in 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+
+/* 和紙テクスチャ風のノイズ重ね */
+.ui-catch-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(180,160,120,0.04) 2px,
+      rgba(180,160,120,0.04) 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(180,160,120,0.03) 3px,
+      rgba(180,160,120,0.03) 6px
+    );
+  pointer-events: none;
+  border-radius: 6px;
+}
+
+/* fantasy 種: 金枠 */
+.ui-catch-card.is-fantasy {
+  border: 2px solid #b8860b;
+  box-shadow:
+    0 0 0 1px #b8860b,
+    0 0 18px rgba(184,134,11,0.5),
+    0 8px 48px rgba(0,0,0,0.7);
+}
+
+/* キラ演出 (fantasy) */
+.ui-catch-card.is-fantasy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255,230,100,0.3) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  animation: kira-sweep 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes kira-sweep {
+  0%   { transform: translateX(-120%) skewX(-20deg); }
+  60%  { transform: translateX(220%)  skewX(-20deg); }
+  100% { transform: translateX(220%)  skewX(-20deg); }
+}
+
+@keyframes card-in {
+  from { transform: translateY(32px) scale(0.92); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+.ui-catch-card__badges {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ui-catch-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+}
+
+.ui-catch-badge.is-new {
+  background: #cc3333;
+  color: #fff;
+}
+
+.ui-catch-badge.is-record {
+  background: #c8860b;
+  color: #fff;
+}
+
+.ui-catch-card__fish-name {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #1a1410;
+  margin-bottom: 2px;
+  line-height: 1.15;
+}
+
+.ui-catch-card__fish-name-en {
+  font-size: 0.82rem;
+  color: #6a5a40;
+  letter-spacing: 0.08em;
+  margin-bottom: 1rem;
+}
+
+.ui-catch-card__svg-wrap {
+  text-align: center;
+  margin: 0.6rem 0 1rem;
+  min-height: 80px;
+}
+
+.ui-catch-card__svg-wrap svg {
+  filter: drop-shadow(0 3px 12px rgba(0,0,0,0.2));
+  max-width: 100%;
+}
+
+.ui-catch-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.ui-catch-stat {
+  background: rgba(160,130,80,0.12);
+  border: 1px solid rgba(160,130,80,0.25);
+  border-radius: 4px;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.ui-catch-stat__label {
+  font-size: 0.66rem;
+  color: #6a5a40;
+  margin-bottom: 2px;
+  letter-spacing: 0.08em;
+}
+
+.ui-catch-stat__value {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 1.05rem;
+  color: #1a1410;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-catch-card__coins {
+  text-align: center;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 1.1rem;
+  color: #8a6010;
+  margin-bottom: 1.2rem;
+  letter-spacing: 0.08em;
+}
+
+.ui-catch-card__close-btn {
+  display: block;
+  width: 100%;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 1rem;
+  letter-spacing: 0.25em;
+  color: #f2ead8;
+  background: #101b2d;
+  border: 1px solid rgba(242,234,216,0.22);
+  padding: 0.65em 0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.ui-catch-card__close-btn:hover {
+  background: #cc3333;
+  border-color: #cc3333;
+}
+
+/* ============================================================
+   図鑑
+   ============================================================ */
+.ui-dex {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  z-index: 100;
+  pointer-events: auto;
+  background: rgba(4,10,18,0.88);
+  backdrop-filter: blur(10px);
+}
+
+.ui-dex.is-active {
+  display: flex;
+}
+
+.ui-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(242,234,216,0.12);
+  background: rgba(6,14,24,0.5);
+  flex-shrink: 0;
+}
+
+.ui-panel-header__title {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.2em;
+  color: #f2ead8;
+}
+
+.ui-panel-header__sub {
+  font-size: 0.78rem;
+  color: #888;
+  margin-left: 12px;
+}
+
+.ui-panel-close {
+  pointer-events: auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(242,234,216,0.15);
+  color: #f2ead8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s;
+}
+
+.ui-panel-close:hover { background: #cc3333; }
+
+.ui-dex__grid-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  overscroll-behavior: contain;
+}
+
+.ui-dex__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .ui-dex__grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+}
+
+.ui-dex-cell {
+  background: rgba(10,20,34,0.7);
+  border: 1.5px solid rgba(242,234,216,0.10);
+  border-radius: 6px;
+  padding: 8px 6px 6px;
+  cursor: pointer;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.12s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ui-dex-cell:hover {
+  border-color: rgba(200,160,64,0.5);
+  box-shadow: 0 0 12px rgba(200,160,64,0.12);
+  transform: translateY(-2px);
+}
+
+.ui-dex-cell.is-caught {
+  border-color: rgba(34,170,100,0.45);
+}
+
+.ui-dex-cell.is-fantasy {
+  border-color: rgba(160,60,220,0.5);
+}
+
+.ui-dex-cell.is-fantasy.is-caught {
+  border-color: #a03cdc;
+  box-shadow: 0 0 10px rgba(160,60,220,0.3);
+}
+
+.ui-dex-cell__silhouette {
+  width: 64px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-dex-cell__silhouette svg {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.ui-dex-cell__name {
+  font-size: 0.68rem;
+  color: #f2ead8;
+  line-height: 1.3;
+  word-break: break-all;
+}
+
+.ui-dex-cell.is-unknown .ui-dex-cell__name {
+  color: #555;
+}
+
+.ui-dex-cell__count {
+  font-size: 0.62rem;
+  color: #8a8;
+}
+
+.ui-dex-cell__size {
+  font-size: 0.62rem;
+  color: #8aa;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 図鑑詳細 overlay */
+.ui-dex-detail {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 110;
+  background: rgba(4,10,18,0.82);
+  pointer-events: auto;
+}
+
+.ui-dex-detail.is-active {
+  display: flex;
+}
+
+.ui-dex-detail__card {
+  width: min(420px, 90vw);
+  background: rgba(10,20,35,0.96);
+  border: 1px solid rgba(242,234,216,0.18);
+  border-radius: 8px;
+  padding: 1.6rem 1.8rem;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  animation: card-in 0.3s ease-out;
+  position: relative;
+}
+
+.ui-dex-detail__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(242,234,216,0.15);
+  color: #f2ead8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: background 0.18s;
+}
+
+.ui-dex-detail__close:hover { background: #cc3333; }
+
+.ui-dex-detail__name {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+  color: #f2ead8;
+  margin-bottom: 2px;
+}
+
+.ui-dex-detail__name-en {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.8rem;
+}
+
+.ui-dex-detail__svg-wrap {
+  text-align: center;
+  margin-bottom: 0.8rem;
+}
+
+.ui-dex-detail__rarity {
+  color: #c8a040;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.1em;
+}
+
+.ui-dex-detail__meta {
+  font-size: 0.78rem;
+  color: #b0a888;
+  margin-bottom: 0.8rem;
+  line-height: 1.8;
+}
+
+.ui-dex-detail__desc {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 0.85rem;
+  color: #d8d0b8;
+  line-height: 1.9;
+  border-top: 1px solid rgba(242,234,216,0.12);
+  padding-top: 0.8rem;
+  margin-top: 0.4rem;
+}
+
+.ui-dex-detail__record {
+  font-size: 0.78rem;
+  color: #8ab08a;
+  margin-top: 0.6rem;
+}
+
+/* ============================================================
+   タックル画面
+   ============================================================ */
+.ui-tackle {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  z-index: 100;
+  pointer-events: auto;
+  background: rgba(4,10,18,0.88);
+  backdrop-filter: blur(10px);
+}
+
+.ui-tackle.is-active {
+  display: flex;
+}
+
+.ui-tackle__tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(242,234,216,0.12);
+  padding: 0 16px;
+  background: rgba(6,14,24,0.5);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.ui-tackle__tab {
+  pointer-events: auto;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 0.88rem;
+  letter-spacing: 0.12em;
+  color: #888;
+  padding: 12px 18px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  transition: color 0.18s;
+}
+
+.ui-tackle__tab.is-active {
+  color: #f2ead8;
+  border-bottom-color: #c8a040;
+}
+
+.ui-tackle__tab:hover {
+  color: #f2ead8;
+}
+
+.ui-tackle__list-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  overscroll-behavior: contain;
+}
+
+.ui-tackle__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(10,20,34,0.6);
+  border: 1px solid rgba(242,234,216,0.09);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  transition: border-color 0.18s;
+}
+
+.ui-tackle__item.is-equipped {
+  border-color: rgba(200,160,64,0.5);
+  background: rgba(40,30,10,0.5);
+}
+
+.ui-tackle__item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-tackle__item-name {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 0.95rem;
+  color: #f2ead8;
+  margin-bottom: 2px;
+}
+
+.ui-tackle__item-desc {
+  font-size: 0.72rem;
+  color: #888;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-tackle__item-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ui-tackle__stat {
+  font-size: 0.7rem;
+  color: #b0a888;
+}
+
+.ui-tackle__stat-stars {
+  color: #c8a040;
+}
+
+.ui-tackle__equipped-badge {
+  font-size: 0.66rem;
+  background: #c8a040;
+  color: #101b2d;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.ui-tackle__action-btn {
+  pointer-events: auto;
+  font-size: 0.8rem;
+  padding: 7px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.18s, border-color 0.18s, opacity 0.18s;
+  border: 1px solid;
+}
+
+.ui-tackle__action-btn.is-equip {
+  background: rgba(34,100,170,0.3);
+  border-color: rgba(80,160,255,0.3);
+  color: #88ccff;
+}
+
+.ui-tackle__action-btn.is-equip:hover {
+  background: rgba(34,100,170,0.6);
+}
+
+.ui-tackle__action-btn.is-buy {
+  background: rgba(40,100,40,0.3);
+  border-color: rgba(80,200,80,0.3);
+  color: #88ee88;
+}
+
+.ui-tackle__action-btn.is-buy:hover {
+  background: rgba(40,120,40,0.6);
+}
+
+.ui-tackle__action-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.ui-tackle__price {
+  font-size: 0.72rem;
+  color: #c8a040;
+  margin-right: 6px;
+}
+
+/* ============================================================
+   メニュー
+   ============================================================ */
+.ui-menu {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: auto;
+  background: rgba(4,10,18,0.78);
+  backdrop-filter: blur(8px);
+}
+
+.ui-menu.is-active {
+  display: flex;
+}
+
+.ui-menu__card {
+  width: min(320px, 80vw);
+  background: rgba(10,20,35,0.96);
+  border: 1px solid rgba(242,234,216,0.15);
+  border-radius: 8px;
+  padding: 2rem 2rem 1.6rem;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  animation: card-in 0.25s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.ui-menu__title {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  color: #f2ead8;
+  margin-bottom: 0.5rem;
+}
+
+.ui-menu__btn {
+  pointer-events: auto;
+  width: 100%;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  color: #f2ead8;
+  background: rgba(242,234,216,0.05);
+  border: 1px solid rgba(242,234,216,0.15);
+  padding: 0.7em 0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+
+.ui-menu__btn:hover {
+  background: #cc3333;
+  border-color: #cc3333;
+  color: #fff;
+}
+
+.ui-menu__btn.is-secondary {
+  color: #888;
+  font-size: 0.82rem;
+}
+
+/* ============================================================
+   スクロールバー
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(200,160,64,0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(200,160,64,0.5);
+}
+
+/* ============================================================
+   ユーティリティ
+   ============================================================ */
+.u-hidden { display: none !important; }
+.u-noevt { pointer-events: none !important; }
+
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div id="ui-root"></div>
+<script type="module">
+import * as THREE from 'three';
+
+//============== 00_species.js ==============
+// 00_species.js — 魚種データ
+// トップレベル宣言: SPECIES_* のみ
+
+const SPECIES = [
+  // ──────────────────────────────────────────────────────────
+  // 1. チヌ (クロダイ)
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'chinu',
+    name: 'チヌ(クロダイ)',
+    nameEn: 'Black seabream',
+    category: 'normal',
+    rarity: 1,
+    minSize: 15, maxSize: 60,
+    weight: { wA: 0.019, wB: 3.0 },
+    habitat: ['bottom', 'mid'],
+    active: ['day', 'dusk', 'night'],
+    baitPref: { mushi: 1.2, oyster: 1.5, ebi: 1.0, lure: 0.6, dango: 1.4 },
+    fight: { power: 0.65, stamina: 0.70, erratic: 0.55 },
+    price: 120,
+    desc: '磯釣りの王様。大阪湾では「チヌ」と呼ばれ、堤防でも磯でも姿を見せる日本を代表するフィッシュ。貝類・ゴカイ何でも食うグルメ派だが、針のサイズと餌の付け方には一家言あり。40cmを超えると「年なし」と呼ばれ、ベテランでも心が震える。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.38, bodyW: 0.14,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.28, end: 0.62, h: 0.12, spiny: true },
+      anal:   { start: 0.60, end: 0.78, h: 0.08 },
+      pectoral: 0.16,
+      colors: { back: '#1e2428', base: '#6a7078', belly: '#dcdcd8', fins: '#3a3d42', eye: '#1a1a1a' },
+      pattern: { type: 'vbars', color: '#151820', count: 5, opacity: 0.18 },
+      sheen: 0.65,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 2. キビレ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'kibirei',
+    name: 'キビレ(キチヌ)',
+    nameEn: 'Yellow seabream',
+    category: 'normal',
+    rarity: 2,
+    minSize: 15, maxSize: 55,
+    weight: { wA: 0.018, wB: 3.0 },
+    habitat: ['bottom', 'mid'],
+    active: ['day', 'dusk'],
+    baitPref: { mushi: 1.3, oyster: 1.2, ebi: 1.1, lure: 0.5, dango: 1.0 },
+    fight: { power: 0.60, stamina: 0.65, erratic: 0.50 },
+    price: 100,
+    desc: 'チヌよりひと回り小さく、黄色い胸鰭・腹鰭が目印。干潟や砂泥底を好み、「チヌのくせにルアーに食ってくる」という評判が若手アングラーに人気。薄塩で焼けば上品な白身の旨さに驚く。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.36, bodyW: 0.13,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.28, end: 0.62, h: 0.11, spiny: true },
+      anal:   { start: 0.60, end: 0.78, h: 0.07 },
+      pectoral: 0.16,
+      colors: { back: '#2a2f34', base: '#7a8088', belly: '#e0e0d8', fins: '#c8a830', eye: '#1a1a1a' },
+      pattern: { type: 'vbars', color: '#20242a', count: 4, opacity: 0.15 },
+      sheen: 0.60,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 3. マダイ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'madai',
+    name: 'マダイ',
+    nameEn: 'Red seabream',
+    category: 'normal',
+    rarity: 3,
+    minSize: 20, maxSize: 80,
+    weight: { wA: 0.024, wB: 3.0 },
+    habitat: ['bottom', 'mid'],
+    active: ['day', 'dusk'],
+    baitPref: { mushi: 1.0, oyster: 1.1, ebi: 1.3, lure: 0.7, dango: 0.8 },
+    fight: { power: 0.75, stamina: 0.80, erratic: 0.45 },
+    price: 250,
+    desc: '縁起物の王様にして食卓の横綱。その鮮やかな朱色と青い斑点は「タイの本物感」そのもの。産卵期の「桜鯛」は身に脂がのって別格の旨さ。50cmを超える大型は深場からの大引きが一番の醍醐味だ。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.40, bodyW: 0.15,
+      snout: 'blunt',
+      tail: 'lunate',
+      dorsal: { start: 0.26, end: 0.60, h: 0.14, spiny: true },
+      anal:   { start: 0.60, end: 0.76, h: 0.09 },
+      pectoral: 0.17,
+      colors: { back: '#b84030', base: '#d05040', belly: '#f0c8b0', fins: '#c04838', eye: '#1a0808' },
+      pattern: { type: 'spots', color: '#4080d0', count: 8, opacity: 0.45 },
+      sheen: 0.70,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 4. メジナ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'mejina',
+    name: 'メジナ(グレ)',
+    nameEn: 'Largescale blackfish',
+    category: 'normal',
+    rarity: 2,
+    minSize: 20, maxSize: 55,
+    weight: { wA: 0.020, wB: 3.0 },
+    habitat: ['mid', 'surface'],
+    active: ['day', 'dusk'],
+    baitPref: { mushi: 1.0, oyster: 0.9, ebi: 0.8, lure: 0.5, dango: 1.5 },
+    fight: { power: 0.70, stamina: 0.72, erratic: 0.65 },
+    price: 130,
+    desc: '磯フカセ釣りの本命中の本命で、関西では「グレ」の愛称で知られる。岩礁の際を泳ぎ、付けエサよりも撒き餌に同調させるシビアな棚合わせが肝。口太と尾長では引きの質がまるで違い、尾長は竿を一気に持っていく暴走族だ。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.36, bodyW: 0.13,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.28, end: 0.64, h: 0.11, spiny: true },
+      anal:   { start: 0.62, end: 0.78, h: 0.08 },
+      pectoral: 0.15,
+      colors: { back: '#28302a', base: '#505a50', belly: '#b8c0b0', fins: '#3a4038', eye: '#1a1a1a' },
+      pattern: { type: 'none', color: '#333', count: 0, opacity: 0.0 },
+      sheen: 0.45,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 5. シーバス (スズキ)
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'seabass',
+    name: 'シーバス(スズキ)',
+    nameEn: 'Japanese seabass',
+    category: 'normal',
+    rarity: 2,
+    minSize: 30, maxSize: 90,
+    weight: { wA: 0.010, wB: 2.9 },
+    habitat: ['mid', 'surface'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 0.8, oyster: 0.6, ebi: 1.1, lure: 1.8, dango: 0.4 },
+    fight: { power: 0.80, stamina: 0.65, erratic: 0.75 },
+    price: 160,
+    desc: '夜の河口や堤防で炸裂するエラ洗いが最大の興奮。ルアーへの反応が高くシーバスゲームは今や一大ジャンル。「フッコ」「スズキ」「ランカー」とサイズで呼び名が変わる出世魚でもあり、ランカー80cmはアングラーの夢。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.26, bodyW: 0.11,
+      snout: 'pointed',
+      tail: 'forked',
+      dorsal: { start: 0.26, end: 0.60, h: 0.10, spiny: true },
+      anal:   { start: 0.62, end: 0.76, h: 0.07 },
+      pectoral: 0.15,
+      colors: { back: '#3a4040', base: '#909898', belly: '#e8e8e4', fins: '#606860', eye: '#181818' },
+      pattern: { type: 'speckle', color: '#303838', count: 12, opacity: 0.25 },
+      sheen: 0.75,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 6. アジ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'aji',
+    name: 'アジ(マアジ)',
+    nameEn: 'Japanese jack mackerel',
+    category: 'normal',
+    rarity: 1,
+    minSize: 12, maxSize: 40,
+    weight: { wA: 0.008, wB: 2.8 },
+    habitat: ['mid', 'surface'],
+    active: ['day', 'dusk', 'night'],
+    baitPref: { mushi: 1.3, oyster: 0.6, ebi: 1.2, lure: 1.0, dango: 0.7 },
+    fight: { power: 0.35, stamina: 0.40, erratic: 0.60 },
+    price: 60,
+    desc: '釣り人が一番お世話になる魚。サビキで入門し、ライトタックルのアジングでその奥深さを知る。刺身・塩焼き・アジフライと活躍の場が広い食卓のMVP。側線に沿ったゼイゴ(稜鱗)が手に刺さるのも愛嬌のうち。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.25, bodyW: 0.10,
+      snout: 'pointed',
+      tail: 'forked',
+      dorsal: { start: 0.28, end: 0.58, h: 0.09, spiny: true },
+      anal:   { start: 0.60, end: 0.74, h: 0.06 },
+      pectoral: 0.14,
+      colors: { back: '#3a4a50', base: '#808c90', belly: '#dce4e0', fins: '#607080', eye: '#181818' },
+      pattern: { type: 'none', color: '#333', count: 0, opacity: 0.0 },
+      sheen: 0.70,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 7. サバ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'saba',
+    name: 'サバ(マサバ)',
+    nameEn: 'Chub mackerel',
+    category: 'normal',
+    rarity: 1,
+    minSize: 20, maxSize: 50,
+    weight: { wA: 0.009, wB: 2.8 },
+    habitat: ['mid', 'surface'],
+    active: ['day', 'dusk'],
+    baitPref: { mushi: 1.0, oyster: 0.5, ebi: 0.9, lure: 1.4, dango: 0.6 },
+    fight: { power: 0.50, stamina: 0.45, erratic: 0.70 },
+    price: 50,
+    desc: '青魚の代表格。背の波状模様は「サバ縞」の語源そのもので、回遊の早さは釣り人を悩ませる。鮮度落ちが早く「サバの生き腐れ」と言われるが、釣りたて直送の〆サバは別物の美味さ。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.22, bodyW: 0.11,
+      snout: 'pointed',
+      tail: 'lunate',
+      dorsal: { start: 0.28, end: 0.55, h: 0.09, spiny: true },
+      anal:   { start: 0.60, end: 0.72, h: 0.06 },
+      pectoral: 0.14,
+      colors: { back: '#2a5040', base: '#607870', belly: '#e0e8e0', fins: '#405850', eye: '#181818' },
+      pattern: { type: 'hstripes', color: '#1a3028', count: 8, opacity: 0.55 },
+      sheen: 0.65,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 8. イワシ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'iwashi',
+    name: 'イワシ(マイワシ)',
+    nameEn: 'Japanese sardine',
+    category: 'normal',
+    rarity: 1,
+    minSize: 10, maxSize: 28,
+    weight: { wA: 0.005, wB: 2.7 },
+    habitat: ['surface'],
+    active: ['day'],
+    baitPref: { mushi: 1.0, oyster: 0.4, ebi: 0.7, lure: 0.8, dango: 0.6 },
+    fight: { power: 0.20, stamina: 0.25, erratic: 0.50 },
+    price: 30,
+    desc: '弱い魚の代名詞だが、釣れた群れに当たると入れ食いの快感は格別。側線に沿った黒い斑点列が個体識別の目印。丸干しや煮付けにすると骨まで食べられ、青魚の栄養素を余すことなく摂取できる。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.20, bodyW: 0.09,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.32, end: 0.54, h: 0.08, spiny: false },
+      anal:   { start: 0.60, end: 0.72, h: 0.05 },
+      pectoral: 0.13,
+      colors: { back: '#304050', base: '#7090a0', belly: '#e0eaea', fins: '#507080', eye: '#181818' },
+      pattern: { type: 'spots', color: '#1a2030', count: 6, opacity: 0.40 },
+      sheen: 0.80,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 9. カサゴ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'kasago',
+    name: 'カサゴ(ガシラ)',
+    nameEn: 'Rockfish',
+    category: 'normal',
+    rarity: 1,
+    minSize: 10, maxSize: 35,
+    weight: { wA: 0.025, wB: 3.1 },
+    habitat: ['bottom'],
+    active: ['day', 'dusk', 'night'],
+    baitPref: { mushi: 1.3, oyster: 1.0, ebi: 1.4, lure: 0.9, dango: 0.5 },
+    fight: { power: 0.45, stamina: 0.50, erratic: 0.40 },
+    price: 80,
+    desc: '根魚の帝王と呼ばれるずんぐり体型。背鰭の棘に毒はないが鋭く刺さるため素手扱いに注意。岩の隙間に突っ込む根ずれは初心者泣かせだが、穴釣りの標的としては最高の相棒。唐揚げは骨まで食べられ磯の旨みが凝縮。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.35, bodyW: 0.16,
+      snout: 'blunt',
+      tail: 'rounded',
+      dorsal: { start: 0.22, end: 0.65, h: 0.15, spiny: true },
+      anal:   { start: 0.62, end: 0.76, h: 0.08 },
+      pectoral: 0.20,
+      colors: { back: '#7a3820', base: '#a05030', belly: '#d0a080', fins: '#8a4028', eye: '#180808' },
+      pattern: { type: 'marble', color: '#4a2010', count: 10, opacity: 0.50 },
+      sheen: 0.25,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 10. メバル
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'mebaru',
+    name: 'メバル',
+    nameEn: 'Japaneseredfin',
+    category: 'normal',
+    rarity: 2,
+    minSize: 10, maxSize: 30,
+    weight: { wA: 0.020, wB: 3.1 },
+    habitat: ['mid', 'bottom'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 1.2, oyster: 0.8, ebi: 1.1, lure: 1.0, dango: 0.5 },
+    fight: { power: 0.38, stamina: 0.45, erratic: 0.50 },
+    price: 90,
+    desc: '大きな目が特徴の夜釣りの定番。春告魚とも呼ばれ、2〜3月に接岸する大型メバルは磯師の垂涎の的。電気ウキで狙う一本釣りには風情があり、メバリングの小型プラグへのアタリは繊細で面白い。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.32, bodyW: 0.13,
+      snout: 'blunt',
+      tail: 'rounded',
+      dorsal: { start: 0.24, end: 0.64, h: 0.13, spiny: true },
+      anal:   { start: 0.62, end: 0.76, h: 0.08 },
+      pectoral: 0.18,
+      colors: { back: '#3a3030', base: '#706060', belly: '#c8c0b0', fins: '#503838', eye: '#080408' },
+      pattern: { type: 'vbars', color: '#282020', count: 6, opacity: 0.30 },
+      sheen: 0.35,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 11. アイナメ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'ainame',
+    name: 'アイナメ',
+    nameEn: 'Fat greenling',
+    category: 'normal',
+    rarity: 2,
+    minSize: 20, maxSize: 55,
+    weight: { wA: 0.015, wB: 2.9 },
+    habitat: ['bottom'],
+    active: ['day', 'dusk'],
+    baitPref: { mushi: 1.4, oyster: 0.9, ebi: 1.2, lure: 0.7, dango: 0.6 },
+    fight: { power: 0.55, stamina: 0.60, erratic: 0.45 },
+    price: 110,
+    desc: '北日本の磯・根魚の代表。胴体に走る側線が5本あるのが和名の由来という説も。晩秋から冬が旬で、鍋や煮付けにすると脂がのって格別。ロックフィッシュゲームでは良型を求めて深場の岩礁を攻める。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.28, bodyW: 0.12,
+      snout: 'blunt',
+      tail: 'rounded',
+      dorsal: { start: 0.24, end: 0.70, h: 0.11, spiny: true },
+      anal:   { start: 0.60, end: 0.78, h: 0.07 },
+      pectoral: 0.17,
+      colors: { back: '#506030', base: '#788050', belly: '#c8c890', fins: '#607040', eye: '#181408' },
+      pattern: { type: 'marble', color: '#384020', count: 8, opacity: 0.40 },
+      sheen: 0.30,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 12. カワハギ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'kawahagi',
+    name: 'カワハギ',
+    nameEn: 'Filefish',
+    category: 'normal',
+    rarity: 2,
+    minSize: 12, maxSize: 35,
+    weight: { wA: 0.030, wB: 3.2 },
+    habitat: ['bottom', 'mid'],
+    active: ['day'],
+    baitPref: { mushi: 1.5, oyster: 1.3, ebi: 1.0, lure: 0.3, dango: 0.8 },
+    fight: { power: 0.30, stamina: 0.35, erratic: 0.80 },
+    price: 150,
+    desc: 'エサ取り名人の異名を持つ難敵。皮が厚く手で剥ける点が和名の由来で、処理した身は淡白で上品な旨み。肝を刺身に乗せた「肝醤油」は三ツ星レストランも顔負けの絶品。アタリを取る繊細さが釣り人を虜にする。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.50, bodyW: 0.12,
+      snout: 'pointed',
+      tail: 'truncate',
+      dorsal: { start: 0.15, end: 0.20, h: 0.18, spiny: true },
+      anal:   { start: 0.58, end: 0.76, h: 0.14 },
+      pectoral: 0.14,
+      colors: { back: '#5a5030', base: '#8a8050', belly: '#d8d0a0', fins: '#706040', eye: '#181408' },
+      pattern: { type: 'marble', color: '#3a3020', count: 12, opacity: 0.45 },
+      sheen: 0.15,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 13. ベラ (キュウセン)
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'bera',
+    name: 'ベラ(キュウセン)',
+    nameEn: 'Rock wrasse',
+    category: 'normal',
+    rarity: 1,
+    minSize: 10, maxSize: 30,
+    weight: { wA: 0.008, wB: 2.8 },
+    habitat: ['bottom', 'mid'],
+    active: ['day'],
+    baitPref: { mushi: 1.5, oyster: 0.9, ebi: 1.0, lure: 0.4, dango: 0.7 },
+    fight: { power: 0.20, stamina: 0.25, erratic: 0.55 },
+    price: 40,
+    desc: '雄は青緑の縞模様、雌はオレンジ縞と性別で配色が正反対という不思議な魚。雌が生長で雄に性転換する雌性先熟型。大阪湾以西では「ベラ飯」「ベラ鍋」として普通に食べられ、侮れない食味の持ち主。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.26, bodyW: 0.11,
+      snout: 'pointed',
+      tail: 'rounded',
+      dorsal: { start: 0.26, end: 0.68, h: 0.10, spiny: true },
+      anal:   { start: 0.60, end: 0.76, h: 0.07 },
+      pectoral: 0.16,
+      colors: { back: '#2a6040', base: '#508060', belly: '#c0d8b8', fins: '#306848', eye: '#101808' },
+      pattern: { type: 'hstripes', color: '#f08030', count: 5, opacity: 0.60 },
+      sheen: 0.40,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 14. シロギス
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'shirogisu',
+    name: 'シロギス',
+    nameEn: 'Japanese whiting',
+    category: 'normal',
+    rarity: 1,
+    minSize: 10, maxSize: 28,
+    weight: { wA: 0.004, wB: 2.6 },
+    habitat: ['bottom'],
+    active: ['day'],
+    baitPref: { mushi: 1.8, oyster: 0.6, ebi: 0.8, lure: 0.3, dango: 0.4 },
+    fight: { power: 0.20, stamina: 0.25, erratic: 0.60 },
+    price: 55,
+    desc: '白砂の砂浜を好む夏の釣りの定番。チョイ投げ釣りの入門種としても人気だが、ピンギス入れ食いからの連掛けは指先の感度が問われる本格派。てんぷらにすると身が締まり甘い磯の香りが広がる夏の味覚。',
+    model: {
+      profile: 'slender',
+      bodyH: 0.18, bodyW: 0.09,
+      snout: 'pointed',
+      tail: 'forked',
+      dorsal: { start: 0.28, end: 0.56, h: 0.09, spiny: true },
+      anal:   { start: 0.58, end: 0.72, h: 0.06 },
+      pectoral: 0.13,
+      colors: { back: '#a09080', base: '#c8b8a8', belly: '#f0ece0', fins: '#b0a090', eye: '#181410' },
+      pattern: { type: 'none', color: '#999', count: 0, opacity: 0.0 },
+      sheen: 0.30,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 15. ハゼ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'haze',
+    name: 'ハゼ(マハゼ)',
+    nameEn: 'Yellowfin goby',
+    category: 'normal',
+    rarity: 1,
+    minSize: 8, maxSize: 22,
+    weight: { wA: 0.003, wB: 2.6 },
+    habitat: ['bottom'],
+    active: ['day'],
+    baitPref: { mushi: 1.5, oyster: 0.6, ebi: 1.2, lure: 0.5, dango: 0.4 },
+    fight: { power: 0.15, stamina: 0.20, erratic: 0.30 },
+    price: 25,
+    desc: '夏から秋にかけて河口や干潟に群れる江戸前釣りの象徴。「ハゼの天ぷら」は落語にも登場する昔ながらの味。ちょい投げの入門種だが、大ハゼを求めて晩秋の深場に挑む「落ちハゼ」釣りにはベテランもはまる渋さがある。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.20, bodyW: 0.12,
+      snout: 'blunt',
+      tail: 'rounded',
+      dorsal: { start: 0.28, end: 0.60, h: 0.10, spiny: true },
+      anal:   { start: 0.58, end: 0.72, h: 0.06 },
+      pectoral: 0.17,
+      colors: { back: '#706040', base: '#907860', belly: '#d0c0a0', fins: '#806850', eye: '#181008' },
+      pattern: { type: 'speckle', color: '#4a3828', count: 14, opacity: 0.40 },
+      sheen: 0.15,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 16. ボラ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'bora',
+    name: 'ボラ',
+    nameEn: 'Flathead grey mullet',
+    category: 'normal',
+    rarity: 1,
+    minSize: 20, maxSize: 65,
+    weight: { wA: 0.012, wB: 2.8 },
+    habitat: ['surface', 'mid'],
+    active: ['day', 'dusk'],
+    baitPref: { mushi: 0.8, oyster: 0.6, ebi: 0.7, lure: 0.5, dango: 1.6 },
+    fight: { power: 0.65, stamina: 0.70, erratic: 0.60 },
+    price: 50,
+    desc: '港や河口でよく見かける大型魚だが、食用としての評価は産地次第。澄んだ外海育ちのボラは刺身でも食べられ、からすみの原料でもある。針がかりすると強烈な引きで竿をひったくり、初心者には本命と間違われることも多い。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.24, bodyW: 0.12,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.32, end: 0.55, h: 0.09, spiny: true },
+      anal:   { start: 0.60, end: 0.74, h: 0.06 },
+      pectoral: 0.14,
+      colors: { back: '#404840', base: '#707870', belly: '#d0d8d0', fins: '#505850', eye: '#181818' },
+      pattern: { type: 'hstripes', color: '#383e38', count: 4, opacity: 0.20 },
+      sheen: 0.50,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 17. サヨリ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'sayori',
+    name: 'サヨリ',
+    nameEn: 'Japanese halfbeak',
+    category: 'normal',
+    rarity: 2,
+    minSize: 20, maxSize: 40,
+    weight: { wA: 0.002, wB: 2.5 },
+    habitat: ['surface'],
+    active: ['day'],
+    baitPref: { mushi: 1.0, oyster: 0.3, ebi: 0.6, lure: 0.8, dango: 0.5 },
+    fight: { power: 0.25, stamina: 0.30, erratic: 0.70 },
+    price: 70,
+    desc: '細長い銀色の体に橙色の嘴が美しい春の表層魚。「表は美しく腹は黒い」という諺の語源とも言われるが、実際は内臓の腹膜が黒いだけ。刺身にすると透明感ある白身が食卓を彩り、秋冬には天ぷらや干物でも人気。',
+    model: {
+      profile: 'slender',
+      bodyH: 0.12, bodyW: 0.08,
+      snout: 'long',
+      tail: 'forked',
+      dorsal: { start: 0.60, end: 0.78, h: 0.07, spiny: false },
+      anal:   { start: 0.62, end: 0.80, h: 0.06 },
+      pectoral: 0.12,
+      colors: { back: '#3a4848', base: '#909898', belly: '#e8eeee', fins: '#708080', eye: '#181c1c' },
+      pattern: { type: 'none', color: '#888', count: 0, opacity: 0.0 },
+      sheen: 0.90,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 18. タチウオ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'tachiuo',
+    name: 'タチウオ',
+    nameEn: 'Largehead hairtail',
+    category: 'normal',
+    rarity: 2,
+    minSize: 40, maxSize: 120,
+    weight: { wA: 0.0008, wB: 2.2 },
+    habitat: ['mid', 'surface'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 0.6, oyster: 0.3, ebi: 0.8, lure: 1.7, dango: 0.3 },
+    fight: { power: 0.60, stamina: 0.55, erratic: 0.80 },
+    price: 130,
+    desc: '銀の太刀のような体が和名の由来。鋭い歯は釣り人の指を容易に切り裂くため、タオルつかみが常識。秋の大阪湾のタチウオ釣りは一大風物詩で、夕マズメに電気ウキが沈む瞬間は格別の興奮。指3〜4本幅の大型は指ドラゴンと称される。',
+    model: {
+      profile: 'eel',
+      bodyH: 0.10, bodyW: 0.06,
+      snout: 'pointed',
+      tail: 'pointed',
+      dorsal: { start: 0.08, end: 0.88, h: 0.06, spiny: false },
+      anal:   { start: 0.50, end: 0.88, h: 0.02 },
+      pectoral: 0.08,
+      colors: { back: '#c0c8cc', base: '#d8e0e4', belly: '#e8f0f4', fins: '#b8c0c8', eye: '#101418' },
+      pattern: { type: 'none', color: '#ccc', count: 0, opacity: 0.0 },
+      sheen: 0.95,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 19. ヒラメ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'hirame',
+    name: 'ヒラメ',
+    nameEn: 'Japanese flounder',
+    category: 'normal',
+    rarity: 3,
+    minSize: 25, maxSize: 80,
+    weight: { wA: 0.025, wB: 2.8 },
+    habitat: ['bottom'],
+    active: ['day', 'dusk'],
+    baitPref: { mushi: 0.7, oyster: 0.5, ebi: 1.2, lure: 1.6, dango: 0.3 },
+    fight: { power: 0.70, stamina: 0.65, erratic: 0.55 },
+    price: 300,
+    desc: '高級魚の代名詞。砂底に擬態して待ち伏せするヒラメは、左目が上を向く「ヒラメは左、カレイは右」の語呂合わせで初心者が必ず覚える魚。ルアーへのアタックは「ヒラメの三段引き」と呼ばれる独特の食い方が特徴。',
+    model: {
+      profile: 'flat',
+      bodyH: 0.45, bodyW: 0.06,
+      snout: 'pointed',
+      tail: 'rounded',
+      dorsal: { start: 0.12, end: 0.82, h: 0.10, spiny: false },
+      anal:   { start: 0.18, end: 0.82, h: 0.10 },
+      pectoral: 0.18,
+      colors: { back: '#706050', base: '#907870', belly: '#e0dcd0', fins: '#806858', eye: '#181008' },
+      pattern: { type: 'speckle', color: '#504030', count: 16, opacity: 0.50 },
+      sheen: 0.20,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 20. マゴチ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'magochi',
+    name: 'マゴチ',
+    nameEn: 'Flathead',
+    category: 'normal',
+    rarity: 3,
+    minSize: 25, maxSize: 70,
+    weight: { wA: 0.010, wB: 2.7 },
+    habitat: ['bottom'],
+    active: ['day'],
+    baitPref: { mushi: 0.6, oyster: 0.4, ebi: 1.4, lure: 1.5, dango: 0.3 },
+    fight: { power: 0.65, stamina: 0.60, erratic: 0.50 },
+    price: 280,
+    desc: '頭が縦に扁平な独特のシルエット。砂泥底の忍者で、小魚やエビに猛然と飛びかかる。夏の高級魚として知られ、薄造りの刺身は透明感ある白身の極み。光るルアーへの反応が高く「コチ師」と呼ばれる専門家も多い。',
+    model: {
+      profile: 'flat',
+      bodyH: 0.20, bodyW: 0.10,
+      snout: 'pointed',
+      tail: 'rounded',
+      dorsal: { start: 0.28, end: 0.65, h: 0.09, spiny: true },
+      anal:   { start: 0.52, end: 0.75, h: 0.07 },
+      pectoral: 0.22,
+      colors: { back: '#806050', base: '#a08060', belly: '#d8c8a8', fins: '#907060', eye: '#181008' },
+      pattern: { type: 'speckle', color: '#604030', count: 20, opacity: 0.45 },
+      sheen: 0.15,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 21. アナゴ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'anago',
+    name: 'アナゴ(マアナゴ)',
+    nameEn: 'Conger eel',
+    category: 'normal',
+    rarity: 2,
+    minSize: 25, maxSize: 70,
+    weight: { wA: 0.003, wB: 2.4 },
+    habitat: ['bottom'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 1.4, oyster: 0.9, ebi: 1.3, lure: 0.4, dango: 0.5 },
+    fight: { power: 0.35, stamina: 0.55, erratic: 0.65 },
+    price: 100,
+    desc: '夜の投げ釣りで穴から出てくる港の守り神。タコ糸のようにクルクル回転して仕掛けを絡め、抜き上げると周囲に飛び散る粘液が釣り人泣かせ。だが、ふわっとした白身を煮穴子にした瞬間、すべての苦労が報われる。',
+    model: {
+      profile: 'eel',
+      bodyH: 0.08, bodyW: 0.07,
+      snout: 'pointed',
+      tail: 'pointed',
+      dorsal: { start: 0.20, end: 0.92, h: 0.05, spiny: false },
+      anal:   { start: 0.45, end: 0.92, h: 0.04 },
+      pectoral: 0.10,
+      colors: { back: '#4a4030', base: '#7a6850', belly: '#c8b898', fins: '#5a5040', eye: '#181008' },
+      pattern: { type: 'spots', color: '#e8e0c8', count: 10, opacity: 0.70 },
+      sheen: 0.20,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 22. ウツボ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'utsubo',
+    name: 'ウツボ',
+    nameEn: 'Undulated moray',
+    category: 'normal',
+    rarity: 3,
+    minSize: 30, maxSize: 120,
+    weight: { wA: 0.004, wB: 2.3 },
+    habitat: ['bottom'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 0.8, oyster: 1.2, ebi: 1.4, lure: 0.6, dango: 0.4 },
+    fight: { power: 0.75, stamina: 0.80, erratic: 0.70 },
+    price: 90,
+    desc: '磯の怪物。岩穴からぬっと現れる鋭い歯は釣りバリを簡単に曲げ、仕掛けごと切られることも多い。土佐では「ぎゅうじ」と呼び、煮付け・タタキと立派な食材だが、首都圏の釣り人には外道扱いされる不遇の魚。',
+    model: {
+      profile: 'eel',
+      bodyH: 0.14, bodyW: 0.12,
+      snout: 'pointed',
+      tail: 'pointed',
+      dorsal: { start: 0.15, end: 0.90, h: 0.08, spiny: false },
+      anal:   { start: 0.45, end: 0.90, h: 0.06 },
+      pectoral: 0.06,
+      colors: { back: '#6a5020', base: '#8a7030', belly: '#c0a060', fins: '#705828', eye: '#201008' },
+      pattern: { type: 'marble', color: '#3a2808', count: 14, opacity: 0.60 },
+      sheen: 0.15,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 23. クサフグ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'kusafugu',
+    name: 'クサフグ',
+    nameEn: 'Grass puffer',
+    category: 'normal',
+    rarity: 1,
+    minSize: 8, maxSize: 18,
+    weight: { wA: 0.015, wB: 3.0 },
+    habitat: ['bottom', 'mid'],
+    active: ['day'],
+    baitPref: { mushi: 1.6, oyster: 1.2, ebi: 1.3, lure: 0.5, dango: 0.9 },
+    fight: { power: 0.15, stamina: 0.20, erratic: 0.30 },
+    price: 10,
+    desc: 'エサ取りの横綱。ゴカイを根本からかじって仕掛けを無効化する達人。仕掛けを引き上げると丸々と膨らんだその姿に思わず笑えるが、猛毒テトロドトキシンを持つため絶対に食べてはいけない。磯の掃除屋とも呼ばれる。',
+    model: {
+      profile: 'round',
+      bodyH: 0.55, bodyW: 0.45,
+      snout: 'blunt',
+      tail: 'rounded',
+      dorsal: { start: 0.60, end: 0.75, h: 0.08, spiny: false },
+      anal:   { start: 0.62, end: 0.76, h: 0.07 },
+      pectoral: 0.14,
+      colors: { back: '#5a6030', base: '#7a8040', belly: '#e0e0c0', fins: '#606840', eye: '#181408' },
+      pattern: { type: 'speckle', color: '#2a2808', count: 20, opacity: 0.55 },
+      sheen: 0.10,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 24. アオリイカ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'aoriika',
+    name: 'アオリイカ',
+    nameEn: 'Bigfin reef squid',
+    category: 'normal',
+    rarity: 3,
+    minSize: 15, maxSize: 45,
+    weight: { wA: 0.018, wB: 2.5 },
+    habitat: ['mid', 'surface'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 0.3, oyster: 0.3, ebi: 1.6, lure: 1.5, dango: 0.2 },
+    fight: { power: 0.55, stamina: 0.50, erratic: 0.85 },
+    price: 280,
+    desc: 'エギングの主役、イカの王様。透明感ある体に興奮すると浮かぶ斑点模様が美しく、磯師は「モイカ」と呼んで敬う。シャクリに反応するエギングの技術論は奥が深く、秋の新子シーズンは磯堤防を問わず大人気。墨汁は着衣に永久に残るので要注意。',
+    model: {
+      profile: 'squid',
+      bodyH: 0.30, bodyW: 0.18,
+      snout: 'pointed',
+      tail: 'pointed',
+      dorsal: { start: 0.10, end: 0.85, h: 0.12, spiny: false },
+      anal:   { start: 0.10, end: 0.85, h: 0.12 },
+      pectoral: 0.20,
+      colors: { back: '#c0c8c0', base: '#d0d8d0', belly: '#e8eee8', fins: '#b8c0b8', eye: '#0a0a0a' },
+      pattern: { type: 'speckle', color: '#8040a0', count: 18, opacity: 0.35 },
+      sheen: 0.50,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 25. マダコ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'madako',
+    name: 'マダコ',
+    nameEn: 'Common octopus',
+    category: 'normal',
+    rarity: 2,
+    minSize: 15, maxSize: 50,
+    weight: { wA: 0.030, wB: 2.8 },
+    habitat: ['bottom'],
+    active: ['day', 'night'],
+    baitPref: { mushi: 0.4, oyster: 1.0, ebi: 1.5, lure: 1.2, dango: 0.3 },
+    fight: { power: 0.50, stamina: 0.60, erratic: 0.75 },
+    price: 200,
+    desc: '8本の腕で岩に吸着し、なかなか浮き上がらない底の強敵。「たこ糸」の語源にもなった引っ張り感は独特。ルアーに抱き着いてくる瞬間の「コンッ」という感触がたまらないと言うタコ師も多い。明石の蛸飯は日本の食文化遺産。',
+    model: {
+      profile: 'squid',
+      bodyH: 0.45, bodyW: 0.40,
+      snout: 'rounded',
+      tail: 'rounded',
+      dorsal: { start: 0.10, end: 0.50, h: 0.05, spiny: false },
+      anal:   { start: 0.10, end: 0.50, h: 0.05 },
+      pectoral: 0.10,
+      colors: { back: '#8a3018', base: '#a04020', belly: '#c07850', fins: '#783010', eye: '#200808' },
+      pattern: { type: 'marble', color: '#5a1808', count: 12, opacity: 0.50 },
+      sheen: 0.10,
+      special: 'tentacles'
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 26. イシダイ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'ishidai',
+    name: 'イシダイ',
+    nameEn: 'Striped beakfish',
+    category: 'normal',
+    rarity: 3,
+    minSize: 20, maxSize: 60,
+    weight: { wA: 0.025, wB: 3.1 },
+    habitat: ['bottom'],
+    active: ['day'],
+    baitPref: { mushi: 0.7, oyster: 1.6, ebi: 1.0, lure: 0.4, dango: 0.5 },
+    fight: { power: 0.80, stamina: 0.75, erratic: 0.55 },
+    price: 350,
+    desc: '磯釣りの最高峰と呼ばれる「磯の王者」。硬い嘴でサザエや貝類を砕く食性から、サザエを餌にした石物専用仕掛けが発達した。縦縞模様は成長で消え、老成魚は「クチグロ」と呼ばれる黒い嘴の横綱になる。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.42, bodyW: 0.16,
+      snout: 'blunt',
+      tail: 'truncate',
+      dorsal: { start: 0.26, end: 0.62, h: 0.13, spiny: true },
+      anal:   { start: 0.60, end: 0.76, h: 0.09 },
+      pectoral: 0.16,
+      colors: { back: '#303030', base: '#606060', belly: '#c0c0c0', fins: '#404040', eye: '#100808' },
+      pattern: { type: 'vbars', color: '#101010', count: 7, opacity: 0.75 },
+      sheen: 0.55,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 27. イシガキダイ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'ishigakidai',
+    name: 'イシガキダイ',
+    nameEn: 'Rock porgy',
+    category: 'normal',
+    rarity: 3,
+    minSize: 20, maxSize: 55,
+    weight: { wA: 0.024, wB: 3.0 },
+    habitat: ['bottom'],
+    active: ['day'],
+    baitPref: { mushi: 0.6, oyster: 1.5, ebi: 1.0, lure: 0.3, dango: 0.5 },
+    fight: { power: 0.75, stamina: 0.72, erratic: 0.50 },
+    price: 320,
+    desc: '体の白い斑点が石垣模様に見えることから命名。イシダイよりさらに南方系で、黒潮の影響を受ける外洋磯でのみ出会える。老成すると口元が白くなり「クチシロ」と称される。白身の刺身は絶品で、釣り上げた喜びと味の両方で釣り人を満足させる。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.40, bodyW: 0.15,
+      snout: 'blunt',
+      tail: 'truncate',
+      dorsal: { start: 0.26, end: 0.62, h: 0.13, spiny: true },
+      anal:   { start: 0.60, end: 0.76, h: 0.09 },
+      pectoral: 0.16,
+      colors: { back: '#282828', base: '#484848', belly: '#a0a0a0', fins: '#383838', eye: '#100808' },
+      pattern: { type: 'spots', color: '#e8e8e8', count: 14, opacity: 0.80 },
+      sheen: 0.50,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 28. イサキ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'isaki',
+    name: 'イサキ',
+    nameEn: 'Threeline grunt',
+    category: 'normal',
+    rarity: 2,
+    minSize: 15, maxSize: 40,
+    weight: { wA: 0.016, wB: 2.9 },
+    habitat: ['mid', 'bottom'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 1.2, oyster: 0.8, ebi: 1.0, lure: 0.7, dango: 1.1 },
+    fight: { power: 0.50, stamina: 0.55, erratic: 0.60 },
+    price: 140,
+    desc: '夜の磯を群れで泳ぐ中型魚。フカセ釣りやカゴ釣りで狙われ、梅雨の時期が最盛期とされる「梅雨イサキ」は脂がのって絶品。若魚には3本の黄縞があるが成長と共に消え、大型の老成魚は磯師が「メッキ」と呼んで珍重する。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.30, bodyW: 0.12,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.26, end: 0.62, h: 0.12, spiny: true },
+      anal:   { start: 0.62, end: 0.76, h: 0.08 },
+      pectoral: 0.15,
+      colors: { back: '#505840', base: '#708060', belly: '#c8d0b8', fins: '#606850', eye: '#181808' },
+      pattern: { type: 'hstripes', color: '#d0c840', count: 3, opacity: 0.50 },
+      sheen: 0.45,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 29. カンパチ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'kanpachi',
+    name: 'カンパチ',
+    nameEn: 'Greater amberjack',
+    category: 'normal',
+    rarity: 3,
+    minSize: 30, maxSize: 100,
+    weight: { wA: 0.011, wB: 2.9 },
+    habitat: ['mid', 'surface'],
+    active: ['day'],
+    baitPref: { mushi: 0.5, oyster: 0.4, ebi: 0.9, lure: 1.8, dango: 0.3 },
+    fight: { power: 0.85, stamina: 0.80, erratic: 0.65 },
+    price: 350,
+    desc: '眉間を斜めに走る八の字に見える斑模様が和名の由来。ブリよりも引きが強烈で「カンパチに走られたら止まらない」と言われる。刺身は脂と旨みのバランスが絶妙で三大回遊魚の一角。青物ジギングで最も人気の高いターゲット。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.28, bodyW: 0.12,
+      snout: 'blunt',
+      tail: 'lunate',
+      dorsal: { start: 0.24, end: 0.58, h: 0.11, spiny: true },
+      anal:   { start: 0.60, end: 0.74, h: 0.08 },
+      pectoral: 0.16,
+      colors: { back: '#2a4050', base: '#5a7880', belly: '#d0dcd8', fins: '#4a6870', eye: '#180c08' },
+      pattern: { type: 'hstripes', color: '#d8a030', count: 1, opacity: 0.70 },
+      sheen: 0.70,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 30. ブリ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'buri',
+    name: 'ブリ',
+    nameEn: 'Japanese amberjack',
+    category: 'normal',
+    rarity: 3,
+    minSize: 40, maxSize: 120,
+    weight: { wA: 0.012, wB: 2.9 },
+    habitat: ['mid', 'surface'],
+    active: ['day'],
+    baitPref: { mushi: 0.4, oyster: 0.3, ebi: 0.8, lure: 1.9, dango: 0.3 },
+    fight: { power: 0.90, stamina: 0.85, erratic: 0.60 },
+    price: 400,
+    desc: '日本の出世魚の代表格。関西でワカナ→ツバス→ハマチ→メジロ→ブリと成長で名が変わる。冬の寒ブリは脂がのった最高級品で、能登や富山の寒ブリ一本釣りは絶景の荒海との勝負。ショアからの大型ブリは「夢の一本」と語り継がれる。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.26, bodyW: 0.12,
+      snout: 'blunt',
+      tail: 'lunate',
+      dorsal: { start: 0.24, end: 0.58, h: 0.10, spiny: true },
+      anal:   { start: 0.60, end: 0.74, h: 0.07 },
+      pectoral: 0.16,
+      colors: { back: '#304858', base: '#607888', belly: '#d8e0dc', fins: '#506878', eye: '#180c08' },
+      pattern: { type: 'hstripes', color: '#c89820', count: 1, opacity: 0.65 },
+      sheen: 0.68,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 31. コノシロ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'konoshiro',
+    name: 'コノシロ',
+    nameEn: 'Gizzard shad',
+    category: 'normal',
+    rarity: 1,
+    minSize: 12, maxSize: 28,
+    weight: { wA: 0.006, wB: 2.7 },
+    habitat: ['surface', 'mid'],
+    active: ['day'],
+    baitPref: { mushi: 1.0, oyster: 0.4, ebi: 0.7, lure: 0.8, dango: 0.6 },
+    fight: { power: 0.25, stamina: 0.30, erratic: 0.55 },
+    price: 35,
+    desc: 'ニシン科の出世魚でコハダの成魚。江戸前寿司のコハダはこの魚の幼魚で、職人の〆の技が光る逸品。群れで回遊する習性から、見つかれば大漁も期待できる。骨が多く食べづらいが、酢締めにすると骨ごと食べられる。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.24, bodyW: 0.09,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.32, end: 0.52, h: 0.10, spiny: false },
+      anal:   { start: 0.58, end: 0.78, h: 0.06 },
+      pectoral: 0.13,
+      colors: { back: '#3a5060', base: '#7898a8', belly: '#d8e8f0', fins: '#608090', eye: '#181c20' },
+      pattern: { type: 'spots', color: '#1a2830', count: 5, opacity: 0.60 },
+      sheen: 0.75,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 32. ウミタナゴ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'umitanago',
+    name: 'ウミタナゴ',
+    nameEn: 'Surfperch',
+    category: 'normal',
+    rarity: 1,
+    minSize: 12, maxSize: 28,
+    weight: { wA: 0.012, wB: 3.0 },
+    habitat: ['mid'],
+    active: ['day'],
+    baitPref: { mushi: 1.3, oyster: 0.8, ebi: 0.9, lure: 0.6, dango: 1.0 },
+    fight: { power: 0.28, stamina: 0.35, erratic: 0.45 },
+    price: 45,
+    desc: '堤防の定番外道だが、体の美しい銀色と赤みのグラデーションが本物の観賞価値を持つ。胎生魚で稚魚を産む珍しい魚種。小型の割に引きは意外とあり、春告魚の一つとして親しまれている。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.38, bodyW: 0.12,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.26, end: 0.64, h: 0.12, spiny: true },
+      anal:   { start: 0.60, end: 0.76, h: 0.08 },
+      pectoral: 0.15,
+      colors: { back: '#404858', base: '#8090a0', belly: '#d8e0e8', fins: '#607080', eye: '#181820' },
+      pattern: { type: 'none', color: '#555', count: 0, opacity: 0.0 },
+      sheen: 0.60,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 33. アカエイ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'akaei',
+    name: 'アカエイ',
+    nameEn: 'Whiptail stingray',
+    category: 'normal',
+    rarity: 2,
+    minSize: 30, maxSize: 100,
+    weight: { wA: 0.050, wB: 2.5 },
+    habitat: ['bottom'],
+    active: ['day'],
+    baitPref: { mushi: 1.3, oyster: 1.0, ebi: 1.2, lure: 0.3, dango: 0.7 },
+    fight: { power: 0.70, stamina: 0.75, erratic: 0.40 },
+    price: 60,
+    desc: '砂底に潜む「平べったい外道」の代表。長い尾の棘には猛毒があり、踏んだり素手でつかんだりすると重傷を負う。引き上げると重くなる独特のアタリに、最初は大物かと期待させてくれる罪な魚。実は焼き肉にするとコリコリした食感が楽しい。',
+    model: {
+      profile: 'flat',
+      bodyH: 0.65, bodyW: 0.04,
+      snout: 'pointed',
+      tail: 'pointed',
+      dorsal: { start: 0.60, end: 0.70, h: 0.04, spiny: false },
+      anal:   { start: 0.62, end: 0.72, h: 0.03 },
+      pectoral: 0.55,
+      colors: { back: '#8a5030', base: '#a06040', belly: '#d0b090', fins: '#8a5030', eye: '#180808' },
+      pattern: { type: 'none', color: '#666', count: 0, opacity: 0.0 },
+      sheen: 0.10,
+      special: null
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 34. ゴンズイ
+  // ──────────────────────────────────────────────────────────
+  {
+    id: 'gonzui',
+    name: 'ゴンズイ',
+    nameEn: 'Striped eel catfish',
+    category: 'normal',
+    rarity: 1,
+    minSize: 8, maxSize: 25,
+    weight: { wA: 0.006, wB: 2.6 },
+    habitat: ['bottom'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 1.5, oyster: 0.9, ebi: 1.2, lure: 0.4, dango: 0.6 },
+    fight: { power: 0.18, stamina: 0.22, erratic: 0.35 },
+    price: 20,
+    desc: '夜釣りの常連トラブルメーカー。背鰭と胸鰭に毒棘があり、刺さると激しく腫れる。幼魚は「ゴンズイ玉」と呼ばれる密集状態で行動するが、その光景は不気味さと神秘さが共存する磯の風物詩。ナマズに似た姿で髭が特徴。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.18, bodyW: 0.12,
+      snout: 'blunt',
+      tail: 'rounded',
+      dorsal: { start: 0.22, end: 0.40, h: 0.10, spiny: true },
+      anal:   { start: 0.58, end: 0.76, h: 0.06 },
+      pectoral: 0.16,
+      colors: { back: '#2a2018', base: '#504030', belly: '#906850', fins: '#3a2e20', eye: '#100808' },
+      pattern: { type: 'hstripes', color: '#e0d090', count: 2, opacity: 0.85 },
+      sheen: 0.12,
+      special: 'whiskers'
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════
+  // 架空種 (category: 'fantasy') — 6種
+  // ══════════════════════════════════════════════════════════
+
+  // F1. 黄金チヌ
+  {
+    id: 'golden_chinu',
+    name: '黄金チヌ',
+    nameEn: 'Golden Black Seabream',
+    category: 'fantasy',
+    rarity: 5,
+    minSize: 30, maxSize: 70,
+    weight: { wA: 0.025, wB: 3.0 },
+    habitat: ['bottom', 'mid'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 0.8, oyster: 2.0, ebi: 0.8, lure: 0.4, dango: 2.5 },
+    fight: { power: 0.95, stamina: 0.95, erratic: 0.80 },
+    price: 5000,
+    desc: '千年を生きたチヌが磯の神気を受けて全身黄金に変じた伝説の魚。月のない闇夜に海底から金色の光を放ちながら浮上すると言われ、一目見ただけで福運が訪れるとも。針に掛けた者は生涯の大漁を約束されるが、逃した者は三年間不漁に泣く。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.38, bodyW: 0.14,
+      snout: 'blunt',
+      tail: 'forked',
+      dorsal: { start: 0.28, end: 0.62, h: 0.12, spiny: true },
+      anal:   { start: 0.60, end: 0.78, h: 0.08 },
+      pectoral: 0.16,
+      colors: { back: '#c8a000', base: '#e8c030', belly: '#fff0a0', fins: '#d0a810', eye: '#301800' },
+      pattern: { type: 'vbars', color: '#c09000', count: 5, opacity: 0.20 },
+      sheen: 1.0,
+      special: 'crown'
+    }
+  },
+
+  // F2. 龍宮の幼竜
+  {
+    id: 'ryuguu_dragon',
+    name: '龍宮の幼竜',
+    nameEn: 'Ryuguu Sea Dragon Fry',
+    category: 'fantasy',
+    rarity: 5,
+    minSize: 50, maxSize: 200,
+    weight: { wA: 0.005, wB: 2.1 },
+    habitat: ['mid', 'surface'],
+    active: ['night'],
+    baitPref: { mushi: 0.3, oyster: 0.5, ebi: 1.2, lure: 1.8, dango: 0.2 },
+    fight: { power: 1.0, stamina: 1.0, erratic: 1.0 },
+    price: 9999,
+    desc: '竜宮城より使わされた竜の御子。リュウグウノツカイを遥かに超える全長を誇り、深夜の外洋磯にのみ姿を現す。頭部の角と鱗から発する青白い燐光は海面を照らし、周囲の魚を従える。釣り上げた者は一夜限り竜宮城に招かれるという言い伝えあり。',
+    model: {
+      profile: 'eel',
+      bodyH: 0.16, bodyW: 0.10,
+      snout: 'pointed',
+      tail: 'lunate',
+      dorsal: { start: 0.05, end: 0.90, h: 0.18, spiny: true },
+      anal:   { start: 0.50, end: 0.90, h: 0.08 },
+      pectoral: 0.14,
+      colors: { back: '#0a1840', base: '#2040a0', belly: '#8090e0', fins: '#1830c0', eye: '#00e8ff' },
+      pattern: { type: 'speckle', color: '#80c0ff', count: 20, opacity: 0.60 },
+      sheen: 0.85,
+      special: 'horn'
+    }
+  },
+
+  // F3. 提灯深海魚
+  {
+    id: 'chochin_fish',
+    name: '提灯深海魚',
+    nameEn: 'Lantern Abyss Fish',
+    category: 'fantasy',
+    rarity: 4,
+    minSize: 20, maxSize: 50,
+    weight: { wA: 0.010, wB: 2.7 },
+    habitat: ['bottom'],
+    active: ['night'],
+    baitPref: { mushi: 0.5, oyster: 0.4, ebi: 0.8, lure: 2.0, dango: 0.2 },
+    fight: { power: 0.70, stamina: 0.65, erratic: 0.90 },
+    price: 2000,
+    desc: '頭頂から伸びる発光器官が日本の提灯に似ることから命名。深海の漆黒で赤い光を灯して獲物を誘き寄せる姿は恐怖と美しさが同居する。釣り上げると水面でもその提灯は消えず、夜の堤防を赤く染める。古文書には「火魚」として恐れられた記録が残る。',
+    model: {
+      profile: 'round',
+      bodyH: 0.50, bodyW: 0.40,
+      snout: 'pointed',
+      tail: 'rounded',
+      dorsal: { start: 0.10, end: 0.20, h: 0.25, spiny: true },
+      anal:   { start: 0.60, end: 0.75, h: 0.09 },
+      pectoral: 0.16,
+      colors: { back: '#1a0808', base: '#380010', belly: '#500018', fins: '#280008', eye: '#ff2000' },
+      pattern: { type: 'speckle', color: '#ff4000', count: 8, opacity: 0.50 },
+      sheen: 0.20,
+      special: 'glow'
+    }
+  },
+
+  // F4. 磯の人面魚
+  {
+    id: 'jinmen_fish',
+    name: '磯の人面魚',
+    nameEn: 'Human-faced Reef Wraith',
+    category: 'fantasy',
+    rarity: 4,
+    minSize: 25, maxSize: 55,
+    weight: { wA: 0.018, wB: 2.9 },
+    habitat: ['mid', 'bottom'],
+    active: ['night'],
+    baitPref: { mushi: 1.0, oyster: 1.0, ebi: 1.0, lure: 1.0, dango: 1.0 },
+    fight: { power: 0.60, stamina: 0.75, erratic: 1.0 },
+    price: 1500,
+    desc: '夜の磯岩際に浮かぶ半透明の魚。顔のような紋様が釣り人を惑わせ、思わず竿を下げさせる怪異。江戸時代の釣り書「磯撰集」にも記述があり、「この魚を見て逃げれば翌日大漁、話しかけると三日は竿を持てなくなる」とある。食味は不明。誰も食べない。',
+    model: {
+      profile: 'deep',
+      bodyH: 0.36, bodyW: 0.13,
+      snout: 'blunt',
+      tail: 'rounded',
+      dorsal: { start: 0.28, end: 0.64, h: 0.11, spiny: false },
+      anal:   { start: 0.60, end: 0.76, h: 0.08 },
+      pectoral: 0.15,
+      colors: { back: '#303848', base: '#606878', belly: '#d0d8e8', fins: '#505868', eye: '#c8c0a0' },
+      pattern: { type: 'marble', color: '#a09888', count: 6, opacity: 0.70 },
+      sheen: 0.40,
+      special: 'ghost'
+    }
+  },
+
+  // F5. 虹色イカ
+  {
+    id: 'rainbow_squid',
+    name: '虹色イカ',
+    nameEn: 'Prismatic Rainbow Squid',
+    category: 'fantasy',
+    rarity: 4,
+    minSize: 20, maxSize: 60,
+    weight: { wA: 0.012, wB: 2.4 },
+    habitat: ['mid', 'surface'],
+    active: ['dusk', 'night'],
+    baitPref: { mushi: 0.2, oyster: 0.3, ebi: 1.4, lure: 2.0, dango: 0.1 },
+    fight: { power: 0.75, stamina: 0.70, erratic: 1.0 },
+    price: 1800,
+    desc: '体色が絶えず変化し、7色の虹模様を呈するアオリイカの変異個体。光の速さで色を変えながら泳ぐ姿は海中の宝石。釣り人の間では「虹イカに会った日はジャンボ宝くじを買え」という都市伝説が流布している。墨は虹色で、コレクターに高値で取引されるとも。',
+    model: {
+      profile: 'squid',
+      bodyH: 0.30, bodyW: 0.18,
+      snout: 'pointed',
+      tail: 'pointed',
+      dorsal: { start: 0.10, end: 0.85, h: 0.14, spiny: false },
+      anal:   { start: 0.10, end: 0.85, h: 0.14 },
+      pectoral: 0.22,
+      colors: { back: '#8020c0', base: '#c040e0', belly: '#e080ff', fins: '#a030d0', eye: '#200030' },
+      pattern: { type: 'speckle', color: '#ffff00', count: 24, opacity: 0.70 },
+      sheen: 0.90,
+      special: 'glow'
+    }
+  },
+
+  // F6. 古代甲冑魚
+  {
+    id: 'ancient_armor_fish',
+    name: '古代甲冑魚',
+    nameEn: 'Ancient Armored Fish',
+    category: 'fantasy',
+    rarity: 4,
+    minSize: 40, maxSize: 90,
+    weight: { wA: 0.040, wB: 3.3 },
+    habitat: ['bottom'],
+    active: ['day', 'dusk'],
+    baitPref: { mushi: 0.8, oyster: 1.8, ebi: 1.0, lure: 0.5, dango: 0.9 },
+    fight: { power: 0.88, stamina: 0.90, erratic: 0.45 },
+    price: 2500,
+    desc: '3億年前のデボン紀に生きた板皮類(プラコダーム)の生き残りとされる深海の化石魚。重厚な骨質甲冑で全身を覆い、その重量感ある引きは一度体験すると忘れられない。学術的価値は計り知れず、釣り上げた際はリリース推奨だが、コインも破格の高額が入る。',
+    model: {
+      profile: 'standard',
+      bodyH: 0.38, bodyW: 0.20,
+      snout: 'blunt',
+      tail: 'truncate',
+      dorsal: { start: 0.24, end: 0.58, h: 0.14, spiny: true },
+      anal:   { start: 0.58, end: 0.74, h: 0.09 },
+      pectoral: 0.20,
+      colors: { back: '#4a5030', base: '#6a7048', belly: '#909870', fins: '#585e38', eye: '#181c10' },
+      pattern: { type: 'marble', color: '#2a3018', count: 18, opacity: 0.65 },
+      sheen: 0.08,
+      special: 'horn'
+    }
+  }
+];
+
+const SPECIES_BY_ID = Object.fromEntries(SPECIES.map(s => [s.id, s]));
+
+
+//============== 01_fishmodel.js ==============
+/*
+ * 01_fishmodel.js — プロシージャル魚メッシュ生成
+ *
+ * テスト用ダミー species 例:
+ * const testSpecies = {
+ *   id: 'chinu', name: 'チヌ',
+ *   model: {
+ *     profile: 'standard', bodyH: 0.32, bodyW: 0.14,
+ *     snout: 'blunt', tail: 'forked',
+ *     dorsal: { start:0.28, end:0.62, h:0.10, spiny:true },
+ *     anal:   { start:0.60, end:0.78, h:0.07 },
+ *     pectoral: 0.16,
+ *     colors: { back:'#1a2030', base:'#6a7080', belly:'#e0e0d8', fins:'#404450', eye:'#111' },
+ *     pattern: { type:'none', color:'#222', count:0, opacity:0 },
+ *     sheen: 0.7, special: null
+ *   }
+ * };
+ * FishCreateMesh(testSpecies, 40);
+ */
+
+// ---- 内部レジストリ / テクスチャキャッシュ ----
+var _FishRegistry = [];
+var _FishTextureCache = {};
+
+// ---- profile ごとのスプライン制御点 ----
+function _FishGetSplinePoints(profile, length) {
+  var L = length;
+  if (profile === 'eel') {
+    return [
+      new THREE.Vector3(0,      0, 0),
+      new THREE.Vector3(L*0.15, 0, 0),
+      new THREE.Vector3(L*0.35, 0, 0),
+      new THREE.Vector3(L*0.55, 0, 0),
+      new THREE.Vector3(L*0.75, 0, 0),
+      new THREE.Vector3(L*0.90, 0, 0),
+      new THREE.Vector3(L,      0, 0)
+    ];
+  }
+  if (profile === 'squid') {
+    return [
+      new THREE.Vector3(0,      0, 0),
+      new THREE.Vector3(L*0.20, 0, 0),
+      new THREE.Vector3(L*0.55, 0, 0),
+      new THREE.Vector3(L*0.80, 0, 0),
+      new THREE.Vector3(L,      0, 0)
+    ];
+  }
+  // standard / deep / slender / flat / round
+  return [
+    new THREE.Vector3(0,      0, 0),
+    new THREE.Vector3(L*0.12, 0, 0),
+    new THREE.Vector3(L*0.30, 0, 0),
+    new THREE.Vector3(L*0.50, 0, 0),
+    new THREE.Vector3(L*0.70, 0, 0),
+    new THREE.Vector3(L*0.85, 0, 0),
+    new THREE.Vector3(L,      0, 0)
+  ];
+}
+
+// ---- 断面スケール(hw=横半径, hh=縦半径) ----
+function _FishGetSectionScale(profile, bodyH, bodyW, t) {
+  var hw, hh, envelope, q;
+  if (profile === 'standard') {
+    envelope = Math.sin(Math.PI * t) * (0.5 + 0.5 * Math.sin(Math.PI * t));
+    hw = bodyW * 0.5 * envelope;
+    hh = bodyH * 0.5 * envelope;
+    if (t < 0.15) { q = t / 0.15; hw *= q; hh *= q; }
+    if (t > 0.85) { q = (1.0 - t) / 0.15; hw *= q; hh *= q; }
+  } else if (profile === 'deep') {
+    envelope = Math.sin(Math.PI * t) * (0.5 + 0.5 * Math.sin(Math.PI * t));
+    hw = bodyW * 0.5 * envelope;
+    hh = bodyH * 0.65 * envelope;
+    if (t < 0.15) { q = t / 0.15; hw *= q; hh *= q; }
+    if (t > 0.80) { q = (1.0 - t) / 0.20; hw *= q; hh *= q; }
+  } else if (profile === 'slender') {
+    envelope = Math.sin(Math.PI * t) * (0.4 + 0.4 * Math.sin(Math.PI * t));
+    hw = bodyW * 0.35 * envelope;
+    hh = bodyH * 0.35 * envelope;
+    if (t < 0.10) { q = t / 0.10; hw *= q; hh *= q; }
+    if (t > 0.80) { q = (1.0 - t) / 0.20; hw *= q; hh *= q; }
+  } else if (profile === 'flat') {
+    envelope = Math.sin(Math.PI * t) * (0.5 + 0.5 * Math.sin(Math.PI * t));
+    hw = bodyW * 1.4 * envelope;
+    hh = bodyH * 0.15 * envelope;
+    if (t < 0.15) { q = t / 0.15; hw *= q; hh *= q; }
+    if (t > 0.80) { q = (1.0 - t) / 0.20; hw *= q; hh *= q; }
+  } else if (profile === 'eel') {
+    var r = bodyW * 0.3 * Math.min(1.0, t < 0.05 ? t / 0.05 : (t > 0.90 ? (1.0 - t) / 0.10 : 1.0));
+    hw = r;
+    hh = r;
+  } else if (profile === 'round') {
+    envelope = Math.sin(Math.PI * t);
+    hw = bodyW * 0.65 * envelope;
+    hh = bodyH * 0.65 * envelope;
+    if (t < 0.10) { q = t / 0.10; hw *= q; hh *= q; }
+    if (t > 0.80) { q = (1.0 - t) / 0.20; hw *= q; hh *= q; }
+  } else if (profile === 'squid') {
+    var taper = 1.0 - t * 0.85;
+    hw = bodyW * 0.45 * taper;
+    hh = bodyH * 0.45 * taper;
+  } else {
+    envelope = Math.sin(Math.PI * t);
+    hw = bodyW * 0.5 * envelope;
+    hh = bodyH * 0.5 * envelope;
+  }
+  return { hw: Math.max(hw, 0.0001), hh: Math.max(hh, 0.0001) };
+}
+
+// ---- 胴体 BufferGeometry ----
+function _FishBuildBodyGeometry(model, length) {
+  var segsAlong  = 28;
+  var segsAround = 18;
+
+  var splinePts = _FishGetSplinePoints(model.profile, length);
+  var curve = new THREE.CatmullRomCurve3(splinePts);
+
+  var totalVerts = (segsAlong + 1) * (segsAround + 1);
+  var positions = new Float32Array(totalVerts * 3);
+  var normals   = new Float32Array(totalVerts * 3);
+  var uvs       = new Float32Array(totalVerts * 2);
+
+  var tangent  = new THREE.Vector3();
+  var normal   = new THREE.Vector3();
+  var binormal = new THREE.Vector3();
+  var worldUp  = new THREE.Vector3(0, 1, 0);
+  var pos      = new THREE.Vector3();
+
+  for (var i = 0; i <= segsAlong; i++) {
+    var t = i / segsAlong;
+    curve.getPoint(t, pos);
+    curve.getTangent(t, tangent);
+    tangent.normalize();
+
+    if (Math.abs(tangent.dot(worldUp)) > 0.99) {
+      normal.set(0, 0, 1);
+    } else {
+      normal.crossVectors(worldUp, tangent).normalize();
+    }
+    binormal.crossVectors(tangent, normal).normalize();
+    normal.crossVectors(binormal, tangent).normalize();
+
+    var sec = _FishGetSectionScale(model.profile, model.bodyH, model.bodyW, t);
+    var hw = sec.hw;
+    var hh = sec.hh;
+
+    for (var j = 0; j <= segsAround; j++) {
+      var phi  = (j / segsAround) * Math.PI * 2;
+      var cosP = Math.cos(phi);
+      var sinP = Math.sin(phi);
+      var nx   = cosP * hw;
+      var ny   = sinP * hh;
+      var vx   = normal.x * nx + binormal.x * ny;
+      var vy   = normal.y * nx + binormal.y * ny;
+      var vz   = normal.z * nx + binormal.z * ny;
+
+      var vi = (i * (segsAround + 1) + j) * 3;
+      positions[vi]     = pos.x + vx;
+      positions[vi + 1] = pos.y + vy;
+      positions[vi + 2] = pos.z + vz;
+
+      var nl = Math.sqrt(vx*vx + vy*vy + vz*vz) || 1.0;
+      normals[vi]     = vx / nl;
+      normals[vi + 1] = vy / nl;
+      normals[vi + 2] = vz / nl;
+
+      var ui = (i * (segsAround + 1) + j) * 2;
+      uvs[ui]     = t;
+      uvs[ui + 1] = j / segsAround;
+    }
+  }
+
+  var faces   = segsAlong * segsAround * 2;
+  var indices = new Uint32Array(faces * 3);
+  var fi = 0;
+  for (var ia = 0; ia < segsAlong; ia++) {
+    for (var ja = 0; ja < segsAround; ja++) {
+      var a = ia * (segsAround + 1) + ja;
+      var b = a + 1;
+      var c = (ia + 1) * (segsAround + 1) + ja;
+      var d = c + 1;
+      indices[fi++] = a; indices[fi++] = c; indices[fi++] = b;
+      indices[fi++] = b; indices[fi++] = c; indices[fi++] = d;
+    }
+  }
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('normal',   new THREE.BufferAttribute(normals, 3));
+  geo.setAttribute('uv',       new THREE.BufferAttribute(uvs, 2));
+  geo.setIndex(new THREE.BufferAttribute(indices, 1));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+// ---- Canvas テクスチャ生成 ----
+function _FishBuildTexture(species) {
+  var m = species.model;
+  var cacheKey = (species.id || 'unknown') + '_' + m.pattern.type + '_' + m.sheen;
+  if (_FishTextureCache[cacheKey]) return _FishTextureCache[cacheKey];
+
+  var W = 512, H = 256;
+  var canvas = document.createElement('canvas');
+  canvas.width  = W;
+  canvas.height = H;
+  var ctx = canvas.getContext('2d');
+
+  // 背→基調→腹 縦グラデ
+  var grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0.00, m.colors.back);
+  grad.addColorStop(0.35, m.colors.back);
+  grad.addColorStop(0.55, m.colors.base);
+  grad.addColorStop(0.75, m.colors.belly);
+  grad.addColorStop(1.00, m.colors.belly);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // pattern
+  var ptype = m.pattern.type;
+  var cnt   = m.pattern.count || 6;
+  ctx.fillStyle = m.pattern.color || '#222';
+  ctx.strokeStyle = m.pattern.color || '#222';
+
+  if (ptype === 'vbars') {
+    ctx.globalAlpha = m.pattern.opacity || 0.5;
+    for (var i = 0; i < cnt; i++) {
+      var bx = (i / cnt) * W + W / cnt * 0.35;
+      var bw = W / cnt * 0.25;
+      ctx.fillRect(bx, 0, bw, H);
+    }
+  } else if (ptype === 'hstripes') {
+    ctx.globalAlpha = m.pattern.opacity || 0.5;
+    for (var i = 0; i < cnt; i++) {
+      var by = (i / cnt) * H;
+      var bh = H / cnt * 0.4;
+      ctx.fillRect(0, by, W, bh);
+    }
+  } else if (ptype === 'spots') {
+    ctx.globalAlpha = (m.pattern.opacity || 0.5) * 0.8;
+    for (var i = 0; i < cnt * cnt; i++) {
+      var sx = (i % cnt) / cnt * W + (Math.sin(i * 7.3) * 0.5 + 0.5) * W / cnt;
+      var sy = Math.floor(i / cnt) / cnt * H + (Math.cos(i * 3.7) * 0.5 + 0.5) * H / cnt;
+      var sr = W / cnt * 0.12;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (ptype === 'speckle') {
+    ctx.globalAlpha = (m.pattern.opacity || 0.5) * 0.6;
+    for (var i = 0; i < cnt * 30; i++) {
+      var px = (Math.sin(i * 1.618) * 0.5 + 0.5) * W;
+      var py = (Math.cos(i * 2.718) * 0.5 + 0.5) * H;
+      var pr = 1.5 + (Math.sin(i * 5.1) * 0.5 + 0.5) * 2.5;
+      ctx.beginPath();
+      ctx.arc(px, py, pr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (ptype === 'marble') {
+    ctx.globalAlpha = (m.pattern.opacity || 0.5) * 0.4;
+    ctx.lineWidth = 2;
+    for (var i = 0; i < cnt * 4; i++) {
+      var mx0 = (Math.sin(i * 1.1) * 0.5 + 0.5) * W;
+      var mx1 = (Math.sin(i * 1.3 + 1) * 0.5 + 0.5) * W;
+      var mx2 = (Math.sin(i * 0.9 + 2) * 0.5 + 0.5) * W;
+      var mx3 = (Math.sin(i * 1.5 + 3) * 0.5 + 0.5) * W;
+      ctx.beginPath();
+      ctx.moveTo(mx0, 0);
+      ctx.bezierCurveTo(mx1, H * 0.33, mx2, H * 0.66, mx3, H);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1.0;
+
+  // 鱗ノイズ
+  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = '#ffffff';
+  for (var yi = 0; yi < H; yi += 7) {
+    var offset = (Math.floor(yi / 7) % 2) * 4;
+    for (var xi = offset; xi < W; xi += 8) {
+      ctx.beginPath();
+      ctx.arc(xi, yi, 2.5, Math.PI * 0.2, Math.PI * 0.8);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1.0;
+
+  // 鰓蓋ライン
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(W * 0.18, H * 0.5, H * 0.38, -Math.PI * 0.4, Math.PI * 0.4);
+  ctx.stroke();
+
+  // 腹の明部
+  var bellyGrad = ctx.createLinearGradient(0, H * 0.60, 0, H);
+  bellyGrad.addColorStop(0, 'rgba(255,255,255,0)');
+  bellyGrad.addColorStop(1, 'rgba(255,255,255,0.18)');
+  ctx.globalAlpha = 1.0;
+  ctx.fillStyle = bellyGrad;
+  ctx.fillRect(0, H * 0.60, W, H * 0.40);
+
+  var tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  _FishTextureCache[cacheKey] = tex;
+  return tex;
+}
+
+// ---- 尾びれ Shape ----
+function _FishTailShape(tailType, scale) {
+  var s = scale;
+  var shape = new THREE.Shape();
+  if (tailType === 'forked') {
+    shape.moveTo(0, 0);
+    shape.lineTo(-s*0.08, s*0.25);
+    shape.lineTo(-s*0.25, s*0.48);
+    shape.lineTo(-s*0.15, s*0.48);
+    shape.lineTo(0, s*0.22);
+    shape.lineTo(s*0.15, s*0.48);
+    shape.lineTo(s*0.25, s*0.48);
+    shape.lineTo(s*0.08, s*0.25);
+    shape.lineTo(0, 0);
+  } else if (tailType === 'lunate') {
+    shape.moveTo(0, 0);
+    shape.bezierCurveTo(-s*0.05, s*0.20, -s*0.35, s*0.38, -s*0.30, s*0.52);
+    shape.lineTo(-s*0.18, s*0.50);
+    shape.bezierCurveTo(-s*0.18, s*0.30, 0, s*0.14, 0, s*0.10);
+    shape.bezierCurveTo(0, s*0.14, s*0.18, s*0.30, s*0.18, s*0.50);
+    shape.lineTo(s*0.30, s*0.52);
+    shape.bezierCurveTo(s*0.35, s*0.38, s*0.05, s*0.20, 0, 0);
+  } else if (tailType === 'rounded') {
+    shape.moveTo(0, 0);
+    shape.bezierCurveTo(-s*0.1, s*0.15, -s*0.28, s*0.25, -s*0.28, s*0.42);
+    shape.bezierCurveTo(-s*0.28, s*0.56, -s*0.15, s*0.58, 0, s*0.58);
+    shape.bezierCurveTo(s*0.15, s*0.58, s*0.28, s*0.56, s*0.28, s*0.42);
+    shape.bezierCurveTo(s*0.28, s*0.25, s*0.1, s*0.15, 0, 0);
+  } else if (tailType === 'truncate') {
+    shape.moveTo(-s*0.22, 0);
+    shape.lineTo(-s*0.22, s*0.45);
+    shape.lineTo( s*0.22, s*0.45);
+    shape.lineTo( s*0.22, 0);
+    shape.lineTo(-s*0.22, 0);
+  } else {
+    // pointed
+    shape.moveTo(0, 0);
+    shape.lineTo(-s*0.16, s*0.30);
+    shape.bezierCurveTo(-s*0.16, s*0.45, -s*0.06, s*0.58, 0, s*0.60);
+    shape.bezierCurveTo( s*0.06, s*0.58,  s*0.16, s*0.45, s*0.16, s*0.30);
+    shape.lineTo(0, 0);
+  }
+  return shape;
+}
+
+// ---- 背鰭/臀鰭 Shape ----
+function _FishDorsalShape(dorsal, scale, spiny) {
+  var ds = dorsal.end - dorsal.start;
+  var w  = ds * scale;
+  var h  = dorsal.h * scale * 1.2;
+  var shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  if (spiny) {
+    var teeth = 8;
+    for (var i = 0; i <= teeth; i++) {
+      var tx = (i / teeth) * w;
+      var ty = (i % 2 === 0) ? h : h * 0.65;
+      shape.lineTo(tx, ty);
+    }
+  } else {
+    shape.bezierCurveTo(w * 0.2, h * 1.1, w * 0.8, h * 1.1, w, h * 0.4);
+  }
+  shape.lineTo(w, 0);
+  shape.lineTo(0, 0);
+  return shape;
+}
+
+// ---- 鰭メッシュ生成 ----
+function _FishMakeFin(shape, depth, color, opacity) {
+  var geo = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: false });
+  geo.computeVertexNormals();
+  var mat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(color),
+    transparent: true,
+    opacity: opacity,
+    side: THREE.DoubleSide,
+    roughness: 0.6,
+    metalness: 0.0,
+    clearcoat: 0.2,
+    depthWrite: false
+  });
+  return { geo: geo, mat: mat, mesh: new THREE.Mesh(geo, mat) };
+}
+
+// ---- 目 ----
+function _FishMakeEye(eyeColor, radius) {
+  var grp = new THREE.Group();
+
+  var eyeGeo = new THREE.SphereGeometry(radius, 10, 10);
+  var eyeMat = new THREE.MeshPhysicalMaterial({ color: 0xdddddd, roughness: 0.1, clearcoat: 1.0 });
+  grp.add(new THREE.Mesh(eyeGeo, eyeMat));
+
+  var pupilGeo = new THREE.SphereGeometry(radius * 0.72, 8, 8);
+  var pupilMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(eyeColor), roughness: 0.3 });
+  var pupilMesh = new THREE.Mesh(pupilGeo, pupilMat);
+  pupilMesh.position.z = radius * 0.3;
+  grp.add(pupilMesh);
+
+  var hlGeo = new THREE.SphereGeometry(radius * 0.25, 6, 6);
+  var hlMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  var hlMesh = new THREE.Mesh(hlGeo, hlMat);
+  hlMesh.position.set(radius * 0.25, radius * 0.25, radius * 0.85);
+  grp.add(hlMesh);
+
+  return {
+    group: grp,
+    geos: [eyeGeo, pupilGeo, hlGeo],
+    mats: [eyeMat, pupilMat, hlMat]
+  };
+}
+
+// ---- squid 脚 ----
+function _FishMakeTentacle(length, thickness, color) {
+  var pts = [];
+  for (var i = 0; i <= 10; i++) {
+    var tt = i / 10;
+    pts.push(new THREE.Vector3(
+      Math.sin(tt * Math.PI * 1.5) * length * 0.12,
+      -tt * length,
+      Math.cos(tt * Math.PI * 0.8) * length * 0.05
+    ));
+  }
+  var curve = new THREE.CatmullRomCurve3(pts);
+  var geo = new THREE.TubeGeometry(curve, 12, thickness, 6, false);
+  var mat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(color),
+    roughness: 0.7,
+    transparent: true,
+    opacity: 0.88,
+    side: THREE.DoubleSide
+  });
+  return { geo: geo, mat: mat, mesh: new THREE.Mesh(geo, mat) };
+}
+
+// ---- special 演出 ----
+function _FishApplySpecial(special, group, length, model, disposables) {
+  if (!special) return;
+  var finColor = model.colors.fins;
+
+  if (special === 'whiskers') {
+    for (var wi = 0; wi < 4; wi++) {
+      var side = (wi % 2 === 0) ? 1 : -1;
+      var wpts = [
+        new THREE.Vector3(length * 0.05, 0, 0),
+        new THREE.Vector3(length * 0.02, side * length * 0.04, -length * 0.04),
+        new THREE.Vector3(0, side * length * 0.07, -length * 0.10)
+      ];
+      var wcurve = new THREE.CatmullRomCurve3(wpts);
+      var wgeo = new THREE.TubeGeometry(wcurve, 6, length * 0.004, 4, false);
+      var wmat = new THREE.MeshPhysicalMaterial({ color: 0x888870, roughness: 0.8 });
+      var wmesh = new THREE.Mesh(wgeo, wmat);
+      wmesh.position.y = (wi < 2 ? 1 : -1) * length * 0.03;
+      group.add(wmesh);
+      disposables.push(wgeo, wmat);
+    }
+  } else if (special === 'glow') {
+    var glight = new THREE.PointLight(0x88ffaa, 2.0, length * 3);
+    glight.position.set(length * 0.1, length * 0.2, 0);
+    group.add(glight);
+
+    var rodPts = [
+      new THREE.Vector3(length * 0.08, 0, 0),
+      new THREE.Vector3(length * 0.10, length * 0.15, 0),
+      new THREE.Vector3(length * 0.06, length * 0.30, 0)
+    ];
+    var rodCurve = new THREE.CatmullRomCurve3(rodPts);
+    var rodGeo = new THREE.TubeGeometry(rodCurve, 8, length * 0.008, 5, false);
+    var rodMat = new THREE.MeshPhysicalMaterial({ color: 0x223322, roughness: 0.6 });
+    group.add(new THREE.Mesh(rodGeo, rodMat));
+
+    var ballGeo = new THREE.SphereGeometry(length * 0.022, 8, 8);
+    var ballMat = new THREE.MeshPhysicalMaterial({
+      color: 0x99ffbb,
+      emissive: new THREE.Color(0x44ff88),
+      emissiveIntensity: 2.5,
+      roughness: 0.1
+    });
+    var ballMesh = new THREE.Mesh(ballGeo, ballMat);
+    ballMesh.position.set(length * 0.06, length * 0.32, 0);
+    group.add(ballMesh);
+    disposables.push(rodGeo, rodMat, ballGeo, ballMat);
+  } else if (special === 'horn') {
+    var hornGeo = new THREE.ConeGeometry(length * 0.025, length * 0.10, 8);
+    var hornMat = new THREE.MeshPhysicalMaterial({ color: 0xd4c080, metalness: 0.5, roughness: 0.3 });
+    var hornMesh = new THREE.Mesh(hornGeo, hornMat);
+    hornMesh.position.set(length * 0.15, length * 0.18, 0);
+    hornMesh.rotation.z = Math.PI * 0.15;
+    group.add(hornMesh);
+    disposables.push(hornGeo, hornMat);
+  } else if (special === 'tentacles') {
+    for (var ti = 0; ti < 8; ti++) {
+      var tangle = (ti / 8) * Math.PI * 2;
+      var tent = _FishMakeTentacle(length * 0.50, length * 0.012, finColor);
+      tent.mesh.position.set(
+        length * 0.95,
+        Math.sin(tangle) * length * 0.06,
+        Math.cos(tangle) * length * 0.06
+      );
+      tent.mesh.rotation.x = tangle;
+      group.add(tent.mesh);
+      disposables.push(tent.geo, tent.mat);
+    }
+  } else if (special === 'crown') {
+    var torusGeo = new THREE.TorusGeometry(length * 0.06, length * 0.010, 8, 24);
+    var torusMat = new THREE.MeshPhysicalMaterial({ color: 0xffd700, metalness: 1.0, roughness: 0.1 });
+    var torusMesh = new THREE.Mesh(torusGeo, torusMat);
+    torusMesh.position.set(length * 0.12, length * 0.22, 0);
+    torusMesh.rotation.x = Math.PI * 0.5;
+    group.add(torusMesh);
+    disposables.push(torusGeo, torusMat);
+  }
+}
+
+// ============================================================
+// 公開 API
+// ============================================================
+
+function FishCreateMesh(species, sizeCm) {
+  var m      = species.model;
+  var length = sizeCm / 100;
+  var group  = new THREE.Group();
+  var disposables = [];
+
+  // ------ 胴体 ------
+  var bodyGeo = _FishBuildBodyGeometry(m, length);
+  var bodyTex = _FishBuildTexture(species);
+  disposables.push(bodyGeo, bodyTex);
+
+  var isShiny = m.sheen > 0.5;
+  var bodyMat = new THREE.MeshPhysicalMaterial({
+    map: bodyTex,
+    metalness: m.sheen * 0.5,
+    roughness: 0.35,
+    clearcoat: 0.6,
+    clearcoatRoughness: 0.3,
+    envMapIntensity: isShiny ? 1.5 : 1.0
+  });
+  if (m.special === 'ghost') {
+    bodyMat.transparent = true;
+    bodyMat.opacity = 0.45;
+    bodyMat.emissive = new THREE.Color(0x8899cc);
+    bodyMat.emissiveIntensity = 0.4;
+  }
+  disposables.push(bodyMat);
+
+  // onBeforeCompile: 泳ぎアニメ (uTime uniform 注入)
+  var uniforms = { uTime: { value: 0.0 } };
+  bodyMat.userData.uniforms = uniforms;
+  var ampStr = (length * 0.10).toFixed(6);
+  bodyMat.onBeforeCompile = function(shader) {
+    shader.uniforms.uTime = uniforms.uTime;
+    shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      '#include <begin_vertex>\n' +
+      'float u_ax = uv.x;\n' +
+      'float sway = sin(uTime * 2.5 + u_ax * 6.2832) * ' + ampStr + ' * pow(u_ax, 1.5);\n' +
+      'transformed.y += sway;\n'
+    );
+  };
+
+  var bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  // スプラインは X軸に沿っているため、魚が Z 方向を向くよう回転
+  bodyMesh.rotation.y = -Math.PI * 0.5;
+  group.add(bodyMesh);
+
+  // ------ 尾びれ ------
+  if (m.profile !== 'eel') {
+    var tailShape = _FishTailShape(m.tail, length);
+    var tailFin   = _FishMakeFin(tailShape, length * 0.005, m.colors.fins, 0.80);
+    tailFin.mesh.rotation.y = -Math.PI * 0.5;
+    tailFin.mesh.position.set(0, -length * 0.03, length);
+    group.add(tailFin.mesh);
+    disposables.push(tailFin.geo, tailFin.mat);
+  }
+
+  // ------ 背鰭 ------
+  var dorsalShape = _FishDorsalShape(m.dorsal, length, m.dorsal.spiny);
+  var dorsalFin   = _FishMakeFin(dorsalShape, length * 0.005, m.colors.fins, 0.82);
+  dorsalFin.mesh.rotation.y = -Math.PI * 0.5;
+  var dorsalY = m.bodyH * length * 0.25;
+  dorsalFin.mesh.position.set(0, dorsalY, m.dorsal.start * length);
+  group.add(dorsalFin.mesh);
+  disposables.push(dorsalFin.geo, dorsalFin.mat);
+
+  // eel は全長背鰭を追加
+  if (m.profile === 'eel') {
+    var eelDorsal  = { start: 0.05, end: 0.95, h: m.bodyH * 0.8, spiny: false };
+    var eelShape   = _FishDorsalShape(eelDorsal, length, false);
+    var eelFin     = _FishMakeFin(eelShape, length * 0.004, m.colors.fins, 0.78);
+    eelFin.mesh.rotation.y = -Math.PI * 0.5;
+    eelFin.mesh.position.set(0, m.bodyH * length * 0.15, eelDorsal.start * length);
+    group.add(eelFin.mesh);
+    disposables.push(eelFin.geo, eelFin.mat);
+  }
+
+  // ------ 臀鰭 ------
+  var analShape = _FishDorsalShape(m.anal, length, false);
+  var analFin   = _FishMakeFin(analShape, length * 0.004, m.colors.fins, 0.76);
+  analFin.mesh.rotation.y = -Math.PI * 0.5;
+  analFin.mesh.rotation.z =  Math.PI;
+  var analY = m.bodyH * length * 0.20;
+  analFin.mesh.position.set(0, -analY, m.anal.start * length);
+  group.add(analFin.mesh);
+  disposables.push(analFin.geo, analFin.mat);
+
+  // ------ 胸鰭 (左右) ------
+  var pSize  = m.pectoral * length;
+  var pShape = new THREE.Shape();
+  pShape.moveTo(0, 0);
+  pShape.bezierCurveTo(pSize*0.1, pSize*0.4, pSize*0.5, pSize*0.7, pSize*0.7, pSize*0.6);
+  pShape.bezierCurveTo(pSize*0.9, pSize*0.45, pSize*0.6, 0, 0, 0);
+
+  for (var ps = -1; ps <= 1; ps += 2) {
+    var pFin = _FishMakeFin(pShape, length * 0.004, m.colors.fins, 0.78);
+    pFin.mesh.rotation.z = ps === 1 ? -Math.PI * 0.3 : Math.PI * 0.3;
+    pFin.mesh.rotation.y = -Math.PI * 0.5;
+    pFin.mesh.position.set(ps * m.bodyW * length * 0.45, 0, length * 0.22);
+    group.add(pFin.mesh);
+    disposables.push(pFin.geo, pFin.mat);
+  }
+
+  // ------ 目 ------
+  var eyeR   = length * 0.030;
+  var eye1   = _FishMakeEye(m.colors.eye, eyeR);
+  var eye2   = _FishMakeEye(m.colors.eye, eyeR);
+
+  if (m.profile === 'flat') {
+    // flat: 目を上面に配置
+    var eyeSpread = m.bodyW * length * 0.25;
+    eye1.group.position.set(-eyeSpread * 0.5, m.bodyH * length * 0.12, length * 0.18);
+    eye2.group.position.set( eyeSpread * 0.5, m.bodyH * length * 0.12, length * 0.18);
+    eye1.group.rotation.z = -Math.PI * 0.5;
+    eye2.group.rotation.z = -Math.PI * 0.5;
+  } else {
+    var eyeLat = m.bodyW * length * 0.42;
+    eye1.group.position.set(-eyeLat, length * 0.03, length * 0.14);
+    eye2.group.position.set( eyeLat, length * 0.03, length * 0.14);
+    eye1.group.rotation.y = -Math.PI * 0.5;
+    eye2.group.rotation.y =  Math.PI * 0.5;
+  }
+  group.add(eye1.group);
+  group.add(eye2.group);
+  disposables.push.apply(disposables, eye1.geos);
+  disposables.push.apply(disposables, eye1.mats);
+  disposables.push.apply(disposables, eye2.geos);
+  disposables.push.apply(disposables, eye2.mats);
+
+  // ------ squid: ヒレ + 脚 ------
+  if (m.profile === 'squid') {
+    for (var sqSide = -1; sqSide <= 1; sqSide += 2) {
+      var sqFinShape = new THREE.Shape();
+      sqFinShape.moveTo(0, 0);
+      sqFinShape.lineTo(-length * 0.18, length * 0.28);
+      sqFinShape.lineTo(-length * 0.12, length * 0.50);
+      sqFinShape.lineTo(0, length * 0.45);
+      sqFinShape.lineTo(0, 0);
+      var sqFin = _FishMakeFin(sqFinShape, length * 0.004, m.colors.fins, 0.75);
+      sqFin.mesh.rotation.y = -Math.PI * 0.5;
+      sqFin.mesh.position.set(sqSide * m.bodyW * length * 0.42, 0, length * 0.30);
+      group.add(sqFin.mesh);
+      disposables.push(sqFin.geo, sqFin.mat);
+    }
+    for (var li = 0; li < 8; li++) {
+      var langle = (li / 8) * Math.PI * 2;
+      var leg = _FishMakeTentacle(length * 0.55, length * 0.014, m.colors.fins);
+      leg.mesh.position.set(
+        length * 0.98,
+        Math.sin(langle) * length * 0.07,
+        Math.cos(langle) * length * 0.07
+      );
+      leg.mesh.rotation.x = langle;
+      group.add(leg.mesh);
+      disposables.push(leg.geo, leg.mat);
+    }
+  }
+
+  // ------ special 演出 ------
+  _FishApplySpecial(m.special, group, length, m, disposables);
+
+  // ghost: 全メッシュを半透明に
+  if (m.special === 'ghost') {
+    group.traverse(function(child) {
+      if (child.isMesh && child.material && child.material !== bodyMat) {
+        child.material.transparent = true;
+        if (child.material.opacity === undefined || child.material.opacity > 0.45) {
+          child.material.opacity = 0.45;
+        }
+      }
+    });
+  }
+
+  // ------ userData ------
+  group.userData.disposables = disposables;
+  group.userData.update = function(t) {
+    uniforms.uTime.value = t;
+  };
+
+  _FishRegistry.push(group);
+  return group;
+}
+
+function FishUpdateAll(t) {
+  for (var i = 0; i < _FishRegistry.length; i++) {
+    var g = _FishRegistry[i];
+    if (g && g.userData && typeof g.userData.update === 'function') {
+      g.userData.update(t);
+    }
+  }
+}
+
+function FishDispose(group) {
+  var idx = _FishRegistry.indexOf(group);
+  if (idx !== -1) _FishRegistry.splice(idx, 1);
+
+  var disposables = group.userData.disposables;
+  if (disposables) {
+    for (var i = 0; i < disposables.length; i++) {
+      var d = disposables[i];
+      if (d && typeof d.dispose === 'function') {
+        d.dispose();
+      }
+    }
+  }
+}
+
+
+//============== 02_ocean.js ==============
+// 02_ocean.js — 海面・空・環境(磯場)
+// トップレベル宣言は Env* / Ocean* 接頭辞のみ
+
+// ============================================================
+// Gerstner 波パラメータ (JS側 / GLSL側で共有する定数)
+// direction は正規化済み
+// ============================================================
+var OceanWaves = (function() {
+  function normalize2(x, z) {
+    var len = Math.sqrt(x * x + z * z);
+    return [x / len, z / len];
+  }
+  var d1 = normalize2(0.8, 0.6);
+  var d2 = normalize2(0.5, -0.7);
+  var d3 = normalize2(-0.3, 0.9);
+  var d4 = normalize2(0.9, 0.4);
+  var d5 = normalize2(-0.6, 0.8);
+  return [
+    { wavelength: 80,  amplitude: 1.20, dx: d1[0], dz: d1[1], speed: 3.0 },
+    { wavelength: 40,  amplitude: 0.60, dx: d2[0], dz: d2[1], speed: 4.0 },
+    { wavelength: 30,  amplitude: 0.40, dx: d3[0], dz: d3[1], speed: 3.5 },
+    { wavelength: 10,  amplitude: 0.12, dx: d4[0], dz: d4[1], speed: 6.0 },
+    { wavelength:  6,  amplitude: 0.06, dx: d5[0], dz: d5[1], speed: 7.0 }
+  ];
+})();
+
+// ============================================================
+// GLSL: Gerstner 波ブロック (頂点シェーダ内で展開)
+// ============================================================
+var OceanVertexShader = [
+  'uniform float uTime;',
+  'uniform vec3 uSunDir;',
+  'varying vec3 vWorldPos;',
+  'varying vec3 vNormal;',
+  'varying float vHeight;',
+  'varying float vFoam;',
+  '',
+  'const int WAVE_COUNT = 5;',
+  'float waveLen[WAVE_COUNT];',
+  'float waveAmp[WAVE_COUNT];',
+  'vec2  waveDir[WAVE_COUNT];',
+  'float waveSpd[WAVE_COUNT];',
+  '',
+  'void initWaves() {',
+  '  waveLen[0]=80.0; waveAmp[0]=1.20; waveDir[0]=normalize(vec2(0.8, 0.6)); waveSpd[0]=3.0;',
+  '  waveLen[1]=40.0; waveAmp[1]=0.60; waveDir[1]=normalize(vec2(0.5,-0.7)); waveSpd[1]=4.0;',
+  '  waveLen[2]=30.0; waveAmp[2]=0.40; waveDir[2]=normalize(vec2(-0.3,0.9)); waveSpd[2]=3.5;',
+  '  waveLen[3]=10.0; waveAmp[3]=0.12; waveDir[3]=normalize(vec2(0.9, 0.4)); waveSpd[3]=6.0;',
+  '  waveLen[4]= 6.0; waveAmp[4]=0.06; waveDir[4]=normalize(vec2(-0.6,0.8)); waveSpd[4]=7.0;',
+  '}',
+  '',
+  'vec3 gerstner(vec3 pos) {',
+  '  initWaves();',
+  '  vec3 p = pos;',
+  '  for (int i = 0; i < WAVE_COUNT; i++) {',
+  '    float k = 6.28318 / waveLen[i];',
+  '    float w = waveSpd[i] * k;',
+  '    float phase = k * dot(waveDir[i], vec2(pos.x, pos.z)) - w * uTime;',
+  '    float Q = 0.5 / (waveAmp[i] * k * float(WAVE_COUNT));',
+  '    p.x += Q * waveAmp[i] * waveDir[i].x * cos(phase);',
+  '    p.z += Q * waveAmp[i] * waveDir[i].y * cos(phase);',
+  '    p.y += waveAmp[i] * sin(phase);',
+  '  }',
+  '  return p;',
+  '}',
+  '',
+  'vec3 gerstnerNormal(vec3 pos) {',
+  '  initWaves();',
+  '  float dydx = 0.0;',
+  '  float dydz = 0.0;',
+  '  float dxdx = 1.0;',
+  '  float dzdz = 1.0;',
+  '  for (int i = 0; i < WAVE_COUNT; i++) {',
+  '    float k = 6.28318 / waveLen[i];',
+  '    float w = waveSpd[i] * k;',
+  '    float phase = k * dot(waveDir[i], vec2(pos.x, pos.z)) - w * uTime;',
+  '    float Q = 0.5 / (waveAmp[i] * k * float(WAVE_COUNT));',
+  '    float WA = waveAmp[i] * k;',
+  '    float sinP = sin(phase);',
+  '    float cosP = cos(phase);',
+  '    dydx += WA * waveDir[i].x * cosP;',
+  '    dydz += WA * waveDir[i].y * cosP;',
+  '    dxdx -= Q * WA * waveDir[i].x * waveDir[i].x * sinP;',
+  '    dzdz -= Q * WA * waveDir[i].y * waveDir[i].y * sinP;',
+  '  }',
+  '  return normalize(vec3(-dydx, 1.0, -dydz));',
+  '}',
+  '',
+  'void main() {',
+  '  vec3 pos = position;',
+  '  vec3 displaced = gerstner(pos);',
+  '  vHeight = displaced.y;',
+  '  vNormal = gerstnerNormal(pos);',
+  '  vWorldPos = displaced;',
+  '  // foam: 高さ > threshold かつ法線傾きが急峻',
+  '  float foamH = step(0.7, displaced.y);',
+  '  float foamN = step(0.7, 1.0 - vNormal.y);',
+  '  vFoam = foamH * foamN;',
+  '  gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);',
+  '}'
+].join('\n');
+
+var OceanFragmentShader = [
+  'uniform float uTime;',
+  'uniform vec3 uSunDir;',
+  'uniform vec3 uSunColor;',
+  'uniform vec3 uSkyColor;',
+  'uniform vec3 uFogColor;',
+  'uniform float uFogDensity;',
+  'varying vec3 vWorldPos;',
+  'varying vec3 vNormal;',
+  'varying float vHeight;',
+  'varying float vFoam;',
+  '',
+  'void main() {',
+  '  vec3 N = normalize(vNormal);',
+  '  vec3 V = normalize(cameraPosition - vWorldPos);',
+  '',
+  '  // 深い藍緑 → 浅瀬グラデーション',
+  '  vec3 deepColor    = vec3(0.02, 0.10, 0.22);',
+  '  vec3 shallowColor = vec3(0.05, 0.28, 0.38);',
+  '  float depthBlend = clamp((vHeight + 1.5) / 3.0, 0.0, 1.0);',
+  '  vec3 baseColor = mix(deepColor, shallowColor, depthBlend);',
+  '',
+  '  // フレネル反射',
+  '  float fresnel = pow(1.0 - max(dot(N, V), 0.0), 4.0);',
+  '  baseColor = mix(baseColor, uSkyColor, fresnel * 0.65);',
+  '',
+  '  // 太陽スペキュラ (Blinn-Phong)',
+  '  vec3 H = normalize(uSunDir + V);',
+  '  float spec = pow(max(dot(N, H), 0.0), 256.0);',
+  '  vec3 specColor = uSunColor * spec * 2.5;',
+  '',
+  '  // 拡散光',
+  '  float diff = max(dot(N, uSunDir), 0.0);',
+  '  vec3 litColor = baseColor * (0.3 + 0.7 * diff) + specColor;',
+  '',
+  '  // 波頭の泡',
+  '  litColor = mix(litColor, vec3(0.95, 0.97, 1.0), vFoam * 0.85);',
+  '',
+  '  // 距離フォグ',
+  '  float dist = length(vWorldPos - cameraPosition);',
+  '  float fogFactor = 1.0 - exp(-uFogDensity * uFogDensity * dist * dist);',
+  '  litColor = mix(litColor, uFogColor, clamp(fogFactor, 0.0, 1.0));',
+  '',
+  '  gl_FragColor = vec4(litColor, 0.92);',
+  '}'
+].join('\n');
+
+// ============================================================
+// 空シェーダ
+// ============================================================
+var OceanSkyVertexShader = [
+  'varying vec3 vWorldDir;',
+  'void main() {',
+  '  vWorldDir = normalize((modelMatrix * vec4(position, 0.0)).xyz);',
+  '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+  '}'
+].join('\n');
+
+var OceanSkyFragmentShader = [
+  'uniform vec3 uSunDir;',
+  'uniform vec3 uZenithColor;',
+  'uniform vec3 uHorizonColor;',
+  'uniform vec3 uGroundColor;',
+  'uniform vec3 uSunColor;',
+  'uniform float uStarIntensity;',
+  'varying vec3 vWorldDir;',
+  '',
+  'float hash(vec2 p) {',
+  '  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);',
+  '}',
+  '',
+  'void main() {',
+  '  vec3 dir = normalize(vWorldDir);',
+  '  float elevation = dir.y;',
+  '',
+  '  // グラデーション',
+  '  vec3 skyColor;',
+  '  if (elevation >= 0.0) {',
+  '    float t = pow(elevation, 0.5);',
+  '    skyColor = mix(uHorizonColor, uZenithColor, t);',
+  '  } else {',
+  '    skyColor = mix(uHorizonColor, uGroundColor, min(-elevation * 5.0, 1.0));',
+  '  }',
+  '',
+  '  // 太陽グロー',
+  '  float sunDot = dot(dir, normalize(uSunDir));',
+  '  float sunGlow = smoothstep(0.96, 1.0, sunDot);',
+  '  float sunHalo = pow(max(sunDot, 0.0), 8.0) * 0.3;',
+  '  skyColor += uSunColor * (sunGlow * 3.0 + sunHalo);',
+  '',
+  '  // 星',
+  '  if (uStarIntensity > 0.0) {',
+  '    vec2 starUV = vec2(atan(dir.z, dir.x) * 0.1591, asin(dir.y) * 0.3183);',
+  '    vec2 cell = floor(starUV * 120.0);',
+  '    float starVal = hash(cell);',
+  '    float starBright = step(0.985, starVal);',
+  '    float twinkle = hash(cell + vec2(0.1, 0.2));',
+  '    skyColor += vec3(starBright * twinkle * uStarIntensity);',
+  '  }',
+  '',
+  '  gl_FragColor = vec4(skyColor, 1.0);',
+  '}'
+].join('\n');
+
+// ============================================================
+// 疑似ノイズ (sin ベース fBm 風)
+// ============================================================
+function OceanNoiseSimple(x, y, z) {
+  var s = Math.sin(x * 1.7 + y * 2.3 + z * 0.9) * 0.5
+        + Math.sin(x * 3.1 - y * 1.5 + z * 2.7) * 0.25
+        + Math.sin(x * 5.3 + y * 4.1 - z * 3.3) * 0.125
+        + Math.sin(x * 9.7 - y * 8.3 + z * 7.1) * 0.0625;
+  return s / 0.9375;
+}
+
+function OceanFbm(x, y, z, octaves) {
+  var val = 0.0, amp = 1.0, freq = 1.0, max = 0.0;
+  for (var i = 0; i < octaves; i++) {
+    val += OceanNoiseSimple(x * freq, y * freq, z * freq) * amp;
+    max += amp;
+    amp  *= 0.5;
+    freq *= 2.1;
+  }
+  return val / max;
+}
+
+// ============================================================
+// 磯の岩生成
+// ============================================================
+function OceanCreateRock(radius, detail, px, py, pz, scaleY) {
+  var geo = new THREE.IcosahedronGeometry(radius, detail);
+  var pos = geo.attributes.position;
+  var count = pos.count;
+  var colors = new Float32Array(count * 3);
+
+  for (var i = 0; i < count; i++) {
+    var x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    var noise = OceanFbm(x * 0.4, y * 0.4, z * 0.4, 4);
+    var disp = 1.0 + noise * 0.45;
+    pos.setXYZ(i, x * disp, y * disp * scaleY, z * disp);
+
+    var yN = y * scaleY * disp;
+    var wet = Math.max(0.0, Math.min(1.0, (0.3 - yN) * 2.0));
+    var r = 0.45 + (1.0 - wet) * 0.25;
+    var g = 0.48 + (1.0 - wet) * 0.22;
+    var b = 0.42 + (1.0 - wet) * 0.20 + wet * 0.15;
+    colors[i * 3]     = r;
+    colors[i * 3 + 1] = g;
+    colors[i * 3 + 2] = b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+
+  var mat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.82,
+    metalness: 0.05
+  });
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(px, py, pz);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+// ============================================================
+// テトラポッド風オブジェクト
+// ============================================================
+function OceanCreateTetrapod(px, py, pz) {
+  var group = new THREE.Group();
+  var mat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 });
+  var angles = [
+    [0, 0, 0],
+    [Math.PI * 0.5, 0, 0],
+    [0, 0, Math.PI * 0.5],
+    [Math.PI * 0.33, Math.PI * 0.33, 0]
+  ];
+  for (var i = 0; i < angles.length; i++) {
+    var geo = new THREE.CylinderGeometry(0.12, 0.18, 1.1, 8);
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.set(angles[i][0], angles[i][1], angles[i][2]);
+    mesh.castShadow = true;
+    group.add(mesh);
+  }
+  group.position.set(px, py, pz);
+  return group;
+}
+
+// ============================================================
+// 遠景の岬・防波堤シルエット
+// ============================================================
+function OceanCreateDistantSilhouette() {
+  var group = new THREE.Group();
+  var mat = new THREE.MeshStandardMaterial({ color: 0x2a3040, roughness: 1.0, metalness: 0.0 });
+
+  // 岬 (複数の Box 合成)
+  var capeData = [
+    [30, 8, 6, 150, 4, -60],
+    [20, 6, 8, 165, 3, -55],
+    [15, 10, 5, 145, 5, -65],
+    [10, 5, 4, 155, 2.5, -58]
+  ];
+  for (var i = 0; i < capeData.length; i++) {
+    var d = capeData[i];
+    var geo = new THREE.BoxGeometry(d[0], d[1], d[2]);
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(d[3], d[4], d[5]);
+    group.add(mesh);
+  }
+
+  // 防波堤
+  var wallGeo = new THREE.BoxGeometry(60, 3, 4);
+  var wall = new THREE.Mesh(wallGeo, mat);
+  wall.position.set(-80, 1.5, -130);
+  wall.rotation.y = 0.3;
+  group.add(wall);
+
+  var wallGeo2 = new THREE.BoxGeometry(40, 2.5, 3.5);
+  var wall2 = new THREE.Mesh(wallGeo2, mat);
+  wall2.position.set(-105, 1.25, -115);
+  wall2.rotation.y = -0.15;
+  group.add(wall2);
+
+  return group;
+}
+
+// ============================================================
+// 灯台
+// ============================================================
+function OceanCreateLighthouse(px, py, pz) {
+  var group = new THREE.Group();
+
+  // 塔
+  var towerGeo = new THREE.CylinderGeometry(0.8, 1.2, 8, 12);
+  var towerMat = new THREE.MeshStandardMaterial({ color: 0xddd8cc, roughness: 0.7 });
+  var tower = new THREE.Mesh(towerGeo, towerMat);
+  tower.position.y = 4;
+  tower.castShadow = true;
+  group.add(tower);
+
+  // 縞模様 (リング)
+  var stripeMat = new THREE.MeshStandardMaterial({ color: 0xcc3322, roughness: 0.7 });
+  for (var i = 0; i < 3; i++) {
+    var ringGeo = new THREE.CylinderGeometry(1.05, 1.05, 0.4, 12);
+    var ring = new THREE.Mesh(ringGeo, stripeMat);
+    ring.position.y = 1.5 + i * 2.5;
+    group.add(ring);
+  }
+
+  // ランプハウス
+  var lampGeo = new THREE.CylinderGeometry(1.0, 1.0, 1.2, 12);
+  var lampMat = new THREE.MeshStandardMaterial({ color: 0x88aacc, roughness: 0.3, metalness: 0.5, transparent: true, opacity: 0.7 });
+  var lamp = new THREE.Mesh(lampGeo, lampMat);
+  lamp.position.y = 8.6;
+  group.add(lamp);
+
+  // 屋根
+  var roofGeo = new THREE.ConeGeometry(1.2, 1.0, 12);
+  var roofMat = new THREE.MeshStandardMaterial({ color: 0x334455, roughness: 0.8 });
+  var roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.position.y = 9.7;
+  group.add(roof);
+
+  // 灯光源
+  var pointLight = new THREE.PointLight(0xffffaa, 2.0, 40);
+  pointLight.position.y = 8.6;
+  group.add(pointLight);
+
+  group.position.set(px, py, pz);
+  return group;
+}
+
+// ============================================================
+// 海中表現 (半透明平面)
+// ============================================================
+function OceanCreateUnderwaterPlane() {
+  var geo = new THREE.PlaneGeometry(180, 180);
+  geo.rotateX(-Math.PI / 2);
+  var mat = new THREE.MeshBasicMaterial({
+    color: 0x021520,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  });
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = -0.5;
+  return mesh;
+}
+
+// ============================================================
+// カモメ
+// ============================================================
+function OceanCreateSeagull() {
+  var group = new THREE.Group();
+
+  // 胴体
+  var bodyGeo = new THREE.SphereGeometry(0.18, 8, 6);
+  bodyGeo.scale(1.8, 0.7, 0.9);
+  var bodyMat = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.8 });
+  var body = new THREE.Mesh(bodyGeo, bodyMat);
+  group.add(body);
+
+  // 翼 (左右)
+  var wingShape = new THREE.Shape();
+  wingShape.moveTo(0, 0);
+  wingShape.quadraticCurveTo(0.6, 0.15, 1.4, 0.05);
+  wingShape.quadraticCurveTo(1.0, -0.05, 0.3, -0.18);
+  wingShape.quadraticCurveTo(0.1, -0.1, 0, 0);
+
+  var extrudeSettings = { depth: 0.04, bevelEnabled: false };
+  var wingGeo = new THREE.ExtrudeGeometry(wingShape, extrudeSettings);
+  var wingMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.8, side: THREE.DoubleSide });
+
+  var wingL = new THREE.Mesh(wingGeo, wingMat);
+  wingL.position.set(0, 0, 0);
+  group.add(wingL);
+
+  var wingRGeo = new THREE.ExtrudeGeometry(wingShape, extrudeSettings);
+  var wingR = new THREE.Mesh(wingRGeo, wingMat);
+  wingR.scale.z = -1;
+  wingR.position.set(0, 0, 0.04);
+  group.add(wingR);
+
+  // 翼への参照を保存
+  group.userData.wingL = wingL;
+  group.userData.wingR = wingR;
+
+  return group;
+}
+
+// ============================================================
+// 主要エントリポイント: EnvCreate
+// ============================================================
+function EnvCreate(scene, renderer) {
+
+  // --- レンダラーシャドウ設定 ---
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  // === 内部状態 ===
+  var _sunDir = new THREE.Vector3(0.5, 0.8, 0.3).normalize();
+  var _sunColor = new THREE.Color(1.0, 0.95, 0.8);
+  var _skyColor = new THREE.Color(0.4, 0.7, 1.0);
+  var _fogColor = new THREE.Color(0.6, 0.75, 0.9);
+  var _currentP = 0.0;
+
+  // === 霧 ===
+  scene.fog = new THREE.FogExp2(_fogColor.getHex(), 0.008);
+
+  // ============================================================
+  // 海面メッシュ
+  // ============================================================
+  var waterGeo = new THREE.PlaneGeometry(200, 200, 256, 256);
+  waterGeo.rotateX(-Math.PI / 2);
+
+  var waterUniforms = {
+    uTime:       { value: 0.0 },
+    uSunDir:     { value: _sunDir.clone() },
+    uSunColor:   { value: new THREE.Vector3(1.0, 0.95, 0.8) },
+    uSkyColor:   { value: new THREE.Vector3(0.4, 0.7, 1.0) },
+    uFogColor:   { value: new THREE.Vector3(0.6, 0.75, 0.9) },
+    uFogDensity: { value: 0.008 }
+  };
+
+  var waterMat = new THREE.ShaderMaterial({
+    uniforms:       waterUniforms,
+    vertexShader:   OceanVertexShader,
+    fragmentShader: OceanFragmentShader,
+    transparent:    true,
+    side:           THREE.FrontSide
+  });
+
+  var water = new THREE.Mesh(waterGeo, waterMat);
+  water.receiveShadow = true;
+  scene.add(water);
+
+  // ============================================================
+  // 空ドーム
+  // ============================================================
+  var skyGeo = new THREE.SphereGeometry(500, 32, 16);
+  var skyUniforms = {
+    uSunDir:        { value: _sunDir.clone() },
+    uZenithColor:   { value: new THREE.Vector3(0.1, 0.35, 0.8) },
+    uHorizonColor:  { value: new THREE.Vector3(0.6, 0.78, 0.95) },
+    uGroundColor:   { value: new THREE.Vector3(0.25, 0.22, 0.18) },
+    uSunColor:      { value: new THREE.Vector3(1.0, 0.9, 0.7) },
+    uStarIntensity: { value: 0.0 }
+  };
+  var skyMat = new THREE.ShaderMaterial({
+    uniforms:       skyUniforms,
+    vertexShader:   OceanSkyVertexShader,
+    fragmentShader: OceanSkyFragmentShader,
+    side:           THREE.BackSide
+  });
+  var skyMesh = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyMesh);
+
+  // ============================================================
+  // 照明
+  // ============================================================
+  var sunLight = new THREE.DirectionalLight(0xfff5e0, 2.0);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.width  = 2048;
+  sunLight.shadow.mapSize.height = 2048;
+  sunLight.shadow.camera.near = 0.5;
+  sunLight.shadow.camera.far  = 500;
+  sunLight.shadow.camera.left   = -60;
+  sunLight.shadow.camera.right  =  60;
+  sunLight.shadow.camera.top    =  60;
+  sunLight.shadow.camera.bottom = -60;
+  sunLight.position.copy(_sunDir).multiplyScalar(100);
+  scene.add(sunLight);
+
+  var hemiLight = new THREE.HemisphereLight(0x88aacc, 0x445566, 0.6);
+  scene.add(hemiLight);
+
+  var ambientLight = new THREE.AmbientLight(0x223344, 0.3);
+  scene.add(ambientLight);
+
+  // ============================================================
+  // 磯場
+  // ============================================================
+  // 主岩
+  var rock1 = OceanCreateRock(2.2, 3,  0.0, -0.5, -2.0, 0.55);
+  var rock2 = OceanCreateRock(1.6, 3,  2.5, -0.8, -0.5, 0.60);
+  var rock3 = OceanCreateRock(1.3, 3, -2.0, -0.7,  0.5, 0.58);
+  var rock4 = OceanCreateRock(0.9, 3,  1.2, -0.6,  1.8, 0.65);
+  scene.add(rock1);
+  scene.add(rock2);
+  scene.add(rock3);
+  scene.add(rock4);
+
+  // 小岩
+  var smallRockData = [
+    [0.5, 2, -3.5, 0.0, -1.0, 0.7],
+    [0.4, 2,  3.8, 0.1, -3.5, 0.6],
+    [0.35, 2, -1.5, 0.0, 2.5, 0.75],
+    [0.45, 2,  4.5, -0.1, 1.0, 0.65]
+  ];
+  for (var sri = 0; sri < smallRockData.length; sri++) {
+    var sd = smallRockData[sri];
+    scene.add(OceanCreateRock(sd[0], sd[1], sd[2], sd[3], sd[4], sd[5]));
+  }
+
+  // テトラポッド
+  scene.add(OceanCreateTetrapod(-4.5, 0.0, -3.0));
+  scene.add(OceanCreateTetrapod( 5.0, 0.1, -4.5));
+  scene.add(OceanCreateTetrapod(-6.0, 0.0,  2.0));
+
+  // 遠景シルエット
+  scene.add(OceanCreateDistantSilhouette());
+
+  // 灯台
+  scene.add(OceanCreateLighthouse(120, 0.0, -80));
+
+  // 海中平面
+  scene.add(OceanCreateUnderwaterPlane());
+
+  // ============================================================
+  // カモメ
+  // ============================================================
+  var seagulls = [];
+  var seagullData = [
+    { radius: 35, speed: 0.22, yBase: 12, wingSpeed: 3.0, offset: 0.0,   phase: 0.0 },
+    { radius: 48, speed: 0.15, yBase: 18, wingSpeed: 2.5, offset: 2.1,   phase: Math.PI * 0.66 },
+    { radius: 30, speed: 0.28, yBase:  9, wingSpeed: 3.5, offset: 1.3,   phase: Math.PI * 1.33 }
+  ];
+  for (var sgi = 0; sgi < seagullData.length; sgi++) {
+    var gull = OceanCreateSeagull();
+    scene.add(gull);
+    seagulls.push({ mesh: gull, data: seagullData[sgi] });
+  }
+
+  // ============================================================
+  // 再利用ベクトル (毎フレームの new 回避)
+  // ============================================================
+  var _tmpSunVec3 = new THREE.Vector3();
+  var _tmpSunColorVec = new THREE.Vector3();
+  var _tmpSkyColorVec = new THREE.Vector3();
+  var _tmpFogColorVec = new THREE.Vector3();
+
+  // ============================================================
+  // setTimeOfDay
+  // ============================================================
+  function EnvSetTimeOfDay(p) {
+    _currentP = p;
+
+    // 太陽 elevation: p=0→30°, p=0.25→70°, p=0.5→5°, p=0.75→-20°, p=1→30°
+    var elevation, azimuth;
+    azimuth = 0.3; // 固定 azimuth
+
+    if (p < 0.25) {
+      // 朝 (0→0.25)
+      var t = p / 0.25;
+      elevation = 0.3 + t * 0.9; // 0.3rad→1.2rad
+    } else if (p < 0.5) {
+      // 昼→夕方 (0.25→0.5)
+      var t = (p - 0.25) / 0.25;
+      elevation = 1.2 - t * 1.1; // 1.2→0.1
+    } else if (p < 0.75) {
+      // 夕方→夜 (0.5→0.75)
+      var t = (p - 0.5) / 0.25;
+      elevation = 0.1 - t * 0.55; // 0.1→-0.45
+    } else {
+      // 夜→朝前 (0.75→1.0)
+      var t = (p - 0.75) / 0.25;
+      elevation = -0.45 + t * 0.75; // -0.45→0.3
+    }
+
+    _sunDir.set(
+      Math.cos(elevation) * Math.sin(azimuth),
+      Math.sin(elevation),
+      Math.cos(elevation) * Math.cos(azimuth)
+    ).normalize();
+
+    // 色の計算
+    var dawn = Math.max(0, Math.min(1, 1 - Math.abs(p - 0.0) * 8));
+    var noon = Math.max(0, Math.min(1, 1 - Math.abs(p - 0.25) * 6));
+    var dusk = Math.max(0, Math.min(1, 1 - Math.abs(p - 0.5) * 8));
+    var night = Math.max(0, Math.min(1, 1 - Math.abs(p - 0.75) * 6));
+    var total = dawn + noon + dusk + night + 0.001;
+
+    // 太陽色
+    var sr = (dawn * 1.0 + noon * 1.0 + dusk * 1.0 + night * 0.1) / total;
+    var sg = (dawn * 0.75 + noon * 0.95 + dusk * 0.45 + night * 0.1) / total;
+    var sb = (dawn * 0.55 + noon * 0.8 + dusk * 0.2 + night * 0.15) / total;
+    _sunColor.setRGB(sr, sg, sb);
+    sunLight.color.setRGB(sr, sg, sb);
+
+    // 太陽強度
+    var sunIntensity = Math.max(0.0, Math.sin(elevation));
+    sunLight.intensity = 0.1 + sunIntensity * 2.2;
+    sunLight.position.copy(_sunDir).multiplyScalar(100);
+
+    // 空の天頂色
+    var zenithR = (dawn * 0.55 + noon * 0.15 + dusk * 0.25 + night * 0.02) / total;
+    var zenithG = (dawn * 0.72 + noon * 0.42 + dusk * 0.18 + night * 0.03) / total;
+    var zenithB = (dawn * 0.88 + noon * 0.95 + dusk * 0.35 + night * 0.12) / total;
+
+    // 地平色
+    var horizR = (dawn * 0.95 + noon * 0.55 + dusk * 0.88 + night * 0.08) / total;
+    var horizG = (dawn * 0.75 + noon * 0.72 + dusk * 0.35 + night * 0.08) / total;
+    var horizB = (dawn * 0.65 + noon * 0.90 + dusk * 0.22 + night * 0.15) / total;
+
+    _skyColor.setRGB(horizR, horizG, horizB);
+
+    skyUniforms.uSunDir.value.copy(_sunDir);
+    skyUniforms.uZenithColor.value.set(zenithR, zenithG, zenithB);
+    skyUniforms.uHorizonColor.value.set(horizR, horizG, horizB);
+    skyUniforms.uSunColor.value.set(sr * 1.5, sg * 1.2, sb * 0.8);
+    skyUniforms.uStarIntensity.value = night * 0.9;
+
+    // 海面 uniform 更新
+    waterUniforms.uSunDir.value.copy(_sunDir);
+    waterUniforms.uSunColor.value.set(sr, sg, sb);
+    waterUniforms.uSkyColor.value.set(horizR, horizG, horizB);
+
+    // フォグ色
+    var fogR = (dawn * 0.75 + noon * 0.62 + dusk * 0.65 + night * 0.08) / total;
+    var fogG = (dawn * 0.80 + noon * 0.75 + dusk * 0.42 + night * 0.09) / total;
+    var fogB = (dawn * 0.85 + noon * 0.90 + dusk * 0.32 + night * 0.15) / total;
+    waterUniforms.uFogColor.value.set(fogR, fogG, fogB);
+
+    if (scene.fog) {
+      scene.fog.color.setRGB(fogR, fogG, fogB);
+    }
+
+    // ヘミライト更新
+    var skyLum = zenithR * 0.3 + zenithG * 0.59 + zenithB * 0.11;
+    hemiLight.color.setRGB(horizR * 0.5, horizG * 0.55, horizB * 0.65);
+    hemiLight.groundColor.setRGB(0.2, 0.18, 0.15);
+    hemiLight.intensity = 0.2 + skyLum * 0.6;
+  }
+
+  // 初期値を適用
+  EnvSetTimeOfDay(0.22); // 朝
+
+  // ============================================================
+  // update
+  // ============================================================
+  function EnvUpdate(t, dt) {
+    // 海面時間
+    waterUniforms.uTime.value = t;
+
+    // カモメ更新
+    for (var i = 0; i < seagulls.length; i++) {
+      var sg2 = seagulls[i];
+      var d = sg2.data;
+      var angle = d.phase + t * d.speed;
+      sg2.mesh.position.set(
+        Math.cos(angle) * d.radius,
+        d.yBase + Math.sin(t * 0.4 + d.offset) * 1.5,
+        Math.sin(angle) * d.radius
+      );
+      sg2.mesh.rotation.y = -angle - Math.PI * 0.5;
+
+      // 羽ばたき
+      var flapAngle = Math.sin(t * d.wingSpeed + d.offset) * 0.5;
+      if (sg2.mesh.userData.wingL) {
+        sg2.mesh.userData.wingL.rotation.z = flapAngle;
+      }
+      if (sg2.mesh.userData.wingR) {
+        sg2.mesh.userData.wingR.rotation.z = -flapAngle;
+      }
+    }
+  }
+
+  // ============================================================
+  // getWaveHeight — CPU 側 Gerstner 実装 (シェーダと同一係数)
+  // ============================================================
+  function EnvGetWaveHeight(x, z, t) {
+    var y = 0.0;
+    var px = x, pz = z;
+    for (var i = 0; i < OceanWaves.length; i++) {
+      var w = OceanWaves[i];
+      var k = (2.0 * Math.PI) / w.wavelength;
+      var omega = w.speed * k;
+      var phase = k * (w.dx * px + w.dz * pz) - omega * t;
+      y += w.amplitude * Math.sin(phase);
+    }
+    return y;
+  }
+
+  // ============================================================
+  // env オブジェクトを返す
+  // ============================================================
+  return {
+    water:      water,
+    sunLight:   sunLight,
+    standY:     1.0,
+    update:     EnvUpdate,
+    getWaveHeight: EnvGetWaveHeight,
+    setTimeOfDay:  EnvSetTimeOfDay
+  };
+}
+
+
+//============== 03_tackle.js ==============
+// 03_tackle.js — タックルデータ
+// トップレベル宣言: TACKLE_* のみ
+
+// ──────────────────────────────────────────────────────────
+// 竿 (6本)
+// ──────────────────────────────────────────────────────────
+const TACKLE_RODS = [
+  {
+    id: 'rod_tanago',
+    name: '磯風 1.5号',
+    desc: '入門者向けの万能磯竿。適度な胴調子で小型から中型まで対応。扱いやすく価格を抑えた一本。',
+    price: 300,
+    power: 1,
+    control: 3
+  },
+  {
+    id: 'rod_isokaze',
+    name: '磯颪 2号',
+    desc: '中級者向けの磯フカセ竿。胴から曲がるしなやかさでチヌのファイトを堪能させてくれる。',
+    price: 1200,
+    power: 2,
+    control: 4
+  },
+  {
+    id: 'rod_hamaotome',
+    name: '浜乙女 投竿30号',
+    desc: '砂浜の投げ釣り専用。強靭なカーボンブランクが遠投を可能にし、キスやカレイ狙いに最適。',
+    price: 2500,
+    power: 3,
+    control: 3
+  },
+  {
+    id: 'rod_ryusei',
+    name: '龍星 磯3号',
+    desc: '大型チヌ・メジナ専用の本格磯竿。強い胴にもかかわらず穂先の繊細さでアタリを逃さない。',
+    price: 6000,
+    power: 4,
+    control: 4
+  },
+  {
+    id: 'rod_kaiou',
+    name: '海皇 遠征5号',
+    desc: '大物専用の剛竿。イシダイや青物の強烈な引きを受け止めるためにブランクを極限まで強化。',
+    price: 15000,
+    power: 5,
+    control: 3
+  },
+  {
+    id: 'rod_namichou',
+    name: '波蝶 競技SP',
+    desc: '競技フカセ師が選ぶ最高峰の一本。超高弾性カーボンで感度と軽さを両立、操作性は別次元。',
+    price: 30000,
+    power: 4,
+    control: 5
+  }
+];
+
+// ──────────────────────────────────────────────────────────
+// リール (5台)
+// ──────────────────────────────────────────────────────────
+const TACKLE_REELS = [
+  {
+    id: 'reel_sazanami',
+    name: '小波 1500番',
+    desc: '入門向けの小型スピニングリール。軽量で扱いやすく、アジングやライトゲームに適している。',
+    price: 400,
+    drag: 1,
+    speed: 3
+  },
+  {
+    id: 'reel_shiokaze',
+    name: '潮風 2500番',
+    desc: '汎用スピニングリール。チヌ釣りや磯フカセの標準機として信頼される中堅モデル。',
+    price: 2000,
+    drag: 2,
+    speed: 3
+  },
+  {
+    id: 'reel_hayashio',
+    name: '早潮 3000番',
+    desc: '高速ギアを搭載した青物対応リール。ドラグも強化され、回遊魚の走りに追従する。',
+    price: 5000,
+    drag: 3,
+    speed: 4
+  },
+  {
+    id: 'reel_ryujin',
+    name: '龍陣 4000番',
+    desc: 'ヒラメ・シーバスゲームに最適な中大型機。精密ドラグが大型魚とのやり取りを制御する。',
+    price: 12000,
+    drag: 4,
+    speed: 4
+  },
+  {
+    id: 'reel_kaijin',
+    name: '海神 SW6000番',
+    desc: '青物・ショアジギング専用の最高峰モデル。防錆ベアリングと超強力ドラグはランカー級も対応。',
+    price: 28000,
+    drag: 5,
+    speed: 5
+  }
+];
+
+// ──────────────────────────────────────────────────────────
+// 仕掛け (6種)
+// ──────────────────────────────────────────────────────────
+const TACKLE_RIGS = [
+  {
+    id: 'rig_tanuki_uki',
+    name: '狸玉 軽量ウキ仕掛け',
+    desc: '小型の軽量ウキで表層〜中層を探る基本仕掛け。アジやウミタナゴの入門に最適。',
+    price: 150,
+    type: 'uki',
+    depth: 'surface',
+    hookSize: 1
+  },
+  {
+    id: 'rig_fukase',
+    name: '磯颯 フカセ仕掛け',
+    desc: '全遊動ウキを使った本格フカセ仕掛け。チヌ・メジナの棚合わせに対応した中層探りの主役。',
+    price: 600,
+    type: 'uki',
+    depth: 'mid',
+    hookSize: 3
+  },
+  {
+    id: 'rig_choitosage',
+    name: '砂浜一筋 チョイ投げ',
+    desc: '砂浜での投げ釣り用胴付き仕掛け。キス・ハゼ・シロギスの底物を狙う定番セット。',
+    price: 250,
+    type: 'bottom',
+    depth: 'bottom',
+    hookSize: 2
+  },
+  {
+    id: 'rig_ishimono',
+    name: '石物専科 胴付き仕掛け',
+    desc: '硬い岩礁底をテンビンと重めのオモリで探る石物専用仕掛け。イシダイの強烈な食い込みに対応。',
+    price: 1200,
+    type: 'bottom',
+    depth: 'bottom',
+    hookSize: 5
+  },
+  {
+    id: 'rig_lure_jig',
+    name: '蒼穹 メタルジグ40g',
+    desc: '青物・ヒラメ狙いのショアジギング用メタルジグ。中層から底付近を幅広くスイミングアクション。',
+    price: 800,
+    type: 'lure',
+    depth: 'mid',
+    hookSize: 4
+  },
+  {
+    id: 'rig_egi',
+    name: '墨彩 エギ3.5号',
+    desc: 'アオリイカ専用エギングルアー。シャクリとフォールの組み合わせでイカを誘惑する表層〜中層対応。',
+    price: 1000,
+    type: 'lure',
+    depth: 'surface',
+    hookSize: 3
+  }
+];
+
+// ──────────────────────────────────────────────────────────
+// エサ (5種 — baitPrefのキーと完全一致)
+// ──────────────────────────────────────────────────────────
+const TACKLE_BAITS = [
+  {
+    id: 'mushi',
+    name: 'イソメ(虫エサ)',
+    desc: '最もオーソドックスな生き餌。ゴカイ・アオイソメが代表格で、ほぼ全魚種に有効な万能エサ。',
+    price: 100
+  },
+  {
+    id: 'oyster',
+    name: 'カキ(牡蠣)',
+    desc: '磯の岩に付いた牡蠣を模した餌。チヌやイシダイなど甲殻類・貝を好む魚に絶大な効果を持つ。',
+    price: 200
+  },
+  {
+    id: 'ebi',
+    name: 'エビ(川エビ・シラサエビ)',
+    desc: '活きエビから冷凍エビまで種類豊富。底物から青物まで広く対応し、特に大型魚へのアピールが高い。',
+    price: 300
+  },
+  {
+    id: 'lure',
+    name: 'ルアー(汎用ミノー)',
+    desc: '本物の小魚を模したハードルアー。シーバス・青物・ヒラメなどフィッシュイーターに特化した擬似餌。',
+    price: 500
+  },
+  {
+    id: 'dango',
+    name: '団子エサ(チヌ団子)',
+    desc: 'ヌカ・アミエビ・麦を混ぜたチヌ専用の配合エサ。底で溶け広がる集魚効果で大型チヌを引き寄せる。',
+    price: 250
+  }
+];
+
+
+//============== 05_ui.js ==============
+/* ============================================================
+   05_ui.js — UIController
+   チヌ釣り三昧 UI 全実装
+   import/export 禁止。トップレベル接頭辞: UI*
+   ============================================================ */
+
+/* ---------- SVGシルエット生成ヘルパー ---------- */
+
+/**
+ * 魚種の model.profile / model.tail などから簡易 SVG パス文字列を生成。
+ * @param {object} species  SPECIES エントリ
+ * @param {boolean} filled  未捕獲=true(グレー塗りつぶし)
+ * @param {number} w 横幅px
+ * @param {number} h 縦幅px
+ * @returns {string} <svg>…</svg> 文字列
+ */
+function UIBuildFishSVG(species, filled, w, h) {
+  w = w || 80;
+  h = h || 52;
+  var m = (species && species.model) ? species.model : {};
+  var profile = m.profile || 'standard';
+  var tail    = m.tail    || 'forked';
+  var bodyH   = m.bodyH  || 0.30;
+  var bodyW   = m.bodyW  || 0.13;
+  var isCat   = species && species.category === 'fantasy';
+
+  // 輪郭色
+  var strokeColor = filled ? '#666' : (isCat ? '#a03cdc' : '#44aa77');
+  var fillColor   = filled ? '#444' : (m.colors ? (m.colors.base || '#6a8fa0') : '#6a8fa0');
+
+  // --- ボディ楕円ベース (cx=w*0.42, cy=h*0.50) ---
+  var cx = w * 0.42;
+  var cy = h * 0.50;
+  var rx = w * 0.34;
+  var ry = h * (bodyH * 1.6);
+  if (ry < 8) ry = 8;
+
+  // profile別調整
+  if (profile === 'deep') { ry *= 1.3; rx *= 0.9; }
+  if (profile === 'slender') { ry *= 0.55; rx *= 1.0; }
+  if (profile === 'flat') { ry *= 0.75; }
+  if (profile === 'eel') { rx *= 1.2; ry *= 0.45; }
+  if (profile === 'round') { ry *= 1.15; rx *= 0.88; }
+  if (profile === 'squid') { ry *= 1.1; rx *= 0.8; }
+
+  // 吻
+  var snoutX = cx + rx + (profile === 'slender' ? w * 0.18 : w * 0.06);
+  var snoutY = cy;
+
+  // 尾部基点
+  var tailBaseX = cx - rx;
+
+  // 尾ひれ
+  var tailPath = '';
+  if (profile === 'squid') {
+    // イカっぽい
+    var t1x = tailBaseX - w * 0.15;
+    var t1ya = cy - ry * 0.6;
+    var t1yb = cy + ry * 0.6;
+    tailPath = 'M ' + tailBaseX + ' ' + (cy - ry * 0.3)
+      + ' Q ' + (tailBaseX - w*0.10) + ' ' + t1ya + ' ' + t1x + ' ' + t1ya
+      + ' L ' + t1x + ' ' + t1yb
+      + ' Q ' + (tailBaseX - w*0.10) + ' ' + t1yb + ' ' + tailBaseX + ' ' + (cy + ry * 0.3)
+      + ' Z';
+  } else if (tail === 'forked' || tail === 'lunate') {
+    var spread = (tail === 'lunate') ? ry * 1.0 : ry * 0.75;
+    var notchX = tailBaseX - w * 0.08;
+    var tipX   = tailBaseX - w * (tail === 'lunate' ? 0.18 : 0.14);
+    tailPath = 'M ' + tailBaseX + ' ' + cy
+      + ' Q ' + notchX + ' ' + (cy - spread * 0.5) + ' ' + tipX + ' ' + (cy - spread)
+      + ' Q ' + (tailBaseX - w*0.04) + ' ' + cy + ' ' + tailBaseX + ' ' + cy
+      + ' Q ' + (tailBaseX - w*0.04) + ' ' + cy + ' ' + tipX + ' ' + (cy + spread)
+      + ' Q ' + notchX + ' ' + (cy + spread * 0.5) + ' ' + tailBaseX + ' ' + cy
+      + ' Z';
+  } else if (tail === 'rounded') {
+    var tipXr = tailBaseX - w * 0.10;
+    tailPath = 'M ' + tailBaseX + ' ' + (cy - ry * 0.6)
+      + ' Q ' + tipXr + ' ' + cy + ' ' + tailBaseX + ' ' + (cy + ry * 0.6)
+      + ' Z';
+  } else if (tail === 'pointed') {
+    var tipXp = tailBaseX - w * 0.14;
+    tailPath = 'M ' + tailBaseX + ' ' + (cy - ry * 0.4)
+      + ' L ' + tipXp + ' ' + cy
+      + ' L ' + tailBaseX + ' ' + (cy + ry * 0.4)
+      + ' Z';
+  } else {
+    // truncate
+    tailPath = 'M ' + tailBaseX + ' ' + (cy - ry * 0.65)
+      + ' L ' + (tailBaseX - w*0.06) + ' ' + (cy - ry * 0.7)
+      + ' L ' + (tailBaseX - w*0.06) + ' ' + (cy + ry * 0.7)
+      + ' L ' + tailBaseX + ' ' + (cy + ry * 0.65)
+      + ' Z';
+  }
+
+  // 背びれ(簡易)
+  var dorsalPath = '';
+  if (profile !== 'eel' && profile !== 'squid') {
+    var dsx = cx + rx * 0.4;
+    var dex = cx - rx * 0.1;
+    var dTop = cy - ry - h * 0.14;
+    dorsalPath = 'M ' + dsx + ' ' + (cy - ry * 0.85)
+      + ' Q ' + ((dsx+dex)/2) + ' ' + dTop + ' ' + dex + ' ' + (cy - ry * 0.75)
+      + ' Z';
+  }
+
+  // 目
+  var eyeRad = Math.max(2.5, ry * 0.18);
+  var eyeX   = cx + rx * 0.55;
+  var eyeY   = cy - ry * 0.12;
+
+  // bodyパス (滑らかな楕円を cubic bezier で描く)
+  var kappa = 0.5523;
+  var bLeft  = cx - rx;
+  var bRight = cx + rx;
+  var bTop   = cy - ry;
+  var bBot   = cy + ry;
+  // 四隅制御点
+  var cpH = rx * kappa;
+  var cpV = ry * kappa;
+  var bodyPath =
+    'M ' + (cx + rx) + ' ' + cy
+    + ' C ' + (cx+rx) + ' ' + (cy-cpV) + ' ' + (cx+cpH) + ' ' + bTop + ' ' + cx + ' ' + bTop
+    + ' C ' + (cx-cpH) + ' ' + bTop + ' ' + bLeft + ' ' + (cy-cpV) + ' ' + bLeft + ' ' + cy
+    + ' C ' + bLeft + ' ' + (cy+cpV) + ' ' + (cx-cpH) + ' ' + bBot + ' ' + cx + ' ' + bBot
+    + ' C ' + (cx+cpH) + ' ' + bBot + ' ' + (cx+rx) + ' ' + (cy+cpV) + ' ' + (cx+rx) + ' ' + cy
+    + ' Z';
+
+  // eel はもっと細長い特有形状
+  if (profile === 'eel') {
+    bodyPath =
+      'M ' + (cx + rx) + ' ' + cy
+      + ' Q ' + (cx + rx*0.6) + ' ' + (cy - ry) + ' ' + cx + ' ' + (cy - ry)
+      + ' Q ' + (cx - rx*0.5) + ' ' + (cy - ry) + ' ' + (cx - rx) + ' ' + cy
+      + ' Q ' + (cx - rx*0.5) + ' ' + (cy + ry) + ' ' + cx + ' ' + (cy + ry)
+      + ' Q ' + (cx + rx*0.6) + ' ' + (cy + ry) + ' ' + (cx + rx) + ' ' + cy
+      + ' Z';
+  }
+
+  var bodyFill = filled ? '#3a3a3a' : fillColor;
+  var belly    = filled ? '#3a3a3a' : (m.colors ? (m.colors.belly || '#dde') : '#dde');
+  var backCol  = filled ? '#3a3a3a' : (m.colors ? (m.colors.back  || '#223344') : '#223344');
+  var finFill  = filled ? '#444'    : (m.colors ? (m.colors.fins  || '#557788') : '#557788');
+
+  // グラデーション ID (衝突防止)
+  var gid = 'fish-g-' + (species ? species.id : 'unk') + '-' + (filled ? 'u' : 'k');
+
+  var svgStr =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">'
+    + '<defs>'
+    + '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0%" stop-color="' + backCol + '"/>'
+    + '<stop offset="60%" stop-color="' + bodyFill + '"/>'
+    + '<stop offset="100%" stop-color="' + belly + '"/>'
+    + '</linearGradient>'
+    + '</defs>';
+
+  // 尾ひれ
+  if (tailPath) {
+    svgStr += '<path d="' + tailPath + '" fill="' + finFill + '" stroke="' + strokeColor + '" stroke-width="0.8" opacity="0.9"/>';
+  }
+  // 背びれ
+  if (dorsalPath) {
+    svgStr += '<path d="' + dorsalPath + '" fill="' + finFill + '" stroke="' + strokeColor + '" stroke-width="0.8" opacity="0.8"/>';
+  }
+  // ボディ
+  svgStr += '<path d="' + bodyPath + '" fill="url(#' + gid + ')" stroke="' + strokeColor + '" stroke-width="1"/>';
+
+  // 目
+  if (!filled) {
+    var eyeColor = m.colors ? (m.colors.eye || '#111') : '#111';
+    svgStr += '<circle cx="' + eyeX + '" cy="' + eyeY + '" r="' + eyeRad + '" fill="' + eyeColor + '"/>'
+      + '<circle cx="' + (eyeX - eyeRad*0.3) + '" cy="' + (eyeY - eyeRad*0.3) + '" r="' + (eyeRad*0.28) + '" fill="rgba(255,255,255,0.7)"/>';
+  }
+  svgStr += '</svg>';
+  return svgStr;
+}
+
+/* ---------- 星評価ヘルパー ---------- */
+function UIStars(n, max) {
+  max = max || 5;
+  var s = '';
+  for (var i = 1; i <= max; i++) {
+    s += i <= n ? '★' : '☆';
+  }
+  return s;
+}
+
+/* ---------- 時刻文字列ヘルパー ---------- */
+function UITimeString(timeOfDay) {
+  // timeOfDay 0..1 → HH:MM 風文字列 (ゲーム内1日)
+  var totalMin = Math.floor(timeOfDay * 24 * 60);
+  var h = Math.floor(totalMin / 60) % 24;
+  var m = totalMin % 60;
+  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+}
+
+function UITimeIcon(timeOfDay) {
+  if (timeOfDay < 0.25)  return '🌅'; // 朝
+  if (timeOfDay < 0.55)  return '☀️'; // 昼
+  if (timeOfDay < 0.75)  return '🌆'; // 夕
+  return '🌙';                         // 夜
+}
+
+/* ---------- UIController 本体 ---------- */
+
+class UIController {
+  /**
+   * @param {HTMLElement} root  #ui-root 要素
+   */
+  constructor(root) {
+    this._root   = root;
+    this._game   = null;
+
+    // HUD差分管理用キャッシュ
+    this._hudCache = {
+      state: null, tension: null, distance: null,
+      stamina: null, coins: null, time: null
+    };
+
+    // bite状態
+    this._biteLevel = 0;
+    this._biteTimeout = null;
+
+    // タックルタブ
+    this._tackleTab = 'rod';
+
+    // DOM参照
+    this._dom = {};
+
+    this._buildDOM();
+  }
+
+  /* ===== DOM構築 ===== */
+  _buildDOM() {
+    var root = this._root;
+    root.innerHTML = '';
+
+    /* --- タイトル --- */
+    var title = this._el('div', 'ui-title', '');
+    title.innerHTML =
+      '<div class="ui-title__logo-wrap">'
+      + '<div class="ui-title__deco-line"></div>'
+      + '<div class="ui-title__main">チヌ釣り三昧</div>'
+      + '<div class="ui-title__sub">〜磯の主を求めて〜</div>'
+      + '<div class="ui-title__deco-line"></div>'
+      + '</div>'
+      + '<button class="ui-title__start-btn" id="ui-start-btn">釣りを始める</button>'
+      + '<div class="ui-title__help">'
+      + '<h3>操作方法</h3>'
+      + '<p>🖱 長押し（クリック保持）でキャストパワー調整</p>'
+      + '<p>🖱 離すとキャスト ─ ウキが着水するまで待機</p>'
+      + '<p>🐟 アタリ「!!」が出たら即クリック → 合わせ！</p>'
+      + '<p>🎣 ファイト中：長押しでリール、離すと糸を送る</p>'
+      + '<p>📱 スマホ：タップ長押し / ドラッグで視点移動</p>'
+      + '</div>';
+
+    root.appendChild(title);
+    this._dom.title = title;
+
+    /* --- HUD --- */
+    var hud = this._el('div', 'ui-hud', '');
+
+    // 左上: 時刻・コイン
+    var topLeft = this._el('div', 'ui-hud__topleft', '');
+    topLeft.innerHTML =
+      '<div class="ui-hud__time-block">'
+      + '<span class="ui-hud__time-icon" id="ui-time-icon">🌅</span>'
+      + '<span class="ui-hud__time-text" id="ui-time-text">06:00</span>'
+      + '</div>'
+      + '<div class="ui-hud__coin-block">'
+      + '<span class="ui-hud__coin-icon">🪙</span>'
+      + '<span class="ui-hud__coin-text" id="ui-coin-text">0</span>'
+      + '</div>';
+    hud.appendChild(topLeft);
+
+    // 右上: アイコンボタン
+    var topRight = this._el('div', 'ui-hud__topright', '');
+    topRight.innerHTML =
+      '<button class="ui-hud__icon-btn" id="ui-btn-dex" title="図鑑">📖</button>'
+      + '<button class="ui-hud__icon-btn" id="ui-btn-tackle" title="タックル">🎣</button>'
+      + '<button class="ui-hud__icon-btn" id="ui-btn-menu" title="メニュー">☰</button>';
+    hud.appendChild(topRight);
+
+    // 左下: タックル簡易表示
+    var tackleInfo = this._el('div', 'ui-hud__tackle-info', '');
+    tackleInfo.innerHTML =
+      '竿 <span id="ui-rod-name">—</span><br>'
+      + 'エサ <span id="ui-bait-name">—</span>';
+    hud.appendChild(tackleInfo);
+
+    // 下中央: 状態テキスト
+    var statusTxt = this._el('div', 'ui-hud__status', '');
+    statusTxt.id = 'ui-status-text';
+    hud.appendChild(statusTxt);
+
+    // キャストメーター
+    var castMeter = this._el('div', 'ui-hud__cast-meter', '');
+    castMeter.id = 'ui-cast-meter';
+    castMeter.innerHTML =
+      '<div class="ui-hud__cast-meter-label">CAST POWER</div>'
+      + '<div class="ui-hud__cast-meter-track">'
+      + '<div class="ui-hud__cast-meter-fill" id="ui-cast-fill"></div>'
+      + '</div>';
+    hud.appendChild(castMeter);
+
+    // テンションパネル(ファイト)
+    var tensionPanel = this._el('div', 'ui-hud__tension-panel', '');
+    tensionPanel.id = 'ui-tension-panel';
+    tensionPanel.innerHTML =
+      '<span class="ui-hud__tension-label">テンション</span>'
+      + '<div class="ui-hud__tension-track">'
+      + '<div class="ui-hud__tension-fill" id="ui-tension-fill"></div>'
+      + '</div>'
+      + '<div class="ui-hud__fish-distance">'
+      + '<span id="ui-fish-dist">—</span><small>m</small>'
+      + '<small>距離</small>'
+      + '</div>'
+      + '<div class="ui-hud__stamina-label">魚の体力</div>'
+      + '<div class="ui-hud__stamina-track">'
+      + '<div class="ui-hud__stamina-fill" id="ui-stamina-fill"></div>'
+      + '</div>';
+    hud.appendChild(tensionPanel);
+
+    root.appendChild(hud);
+    this._dom.hud = hud;
+
+    /* --- アタリ演出(前アタリ) --- */
+    var biteMinor = this._el('div', 'ui-bite-minor', '');
+    biteMinor.id = 'ui-bite-minor';
+    biteMinor.innerHTML =
+      '<div class="ui-bite-minor__ripple"></div>'
+      + '<div class="ui-bite-minor__ripple"></div>'
+      + '<div class="ui-bite-minor__ripple"></div>'
+      + '<div class="ui-bite-minor__text">…!</div>';
+    root.appendChild(biteMinor);
+    this._dom.biteMinor = biteMinor;
+
+    /* --- アタリ演出(本アタリ) --- */
+    var biteMajor = this._el('div', 'ui-bite-major', '');
+    biteMajor.id = 'ui-bite-major';
+    biteMajor.innerHTML = '<div class="ui-bite-major__text">!!</div>';
+    root.appendChild(biteMajor);
+    this._dom.biteMajor = biteMajor;
+
+    /* --- 釣果モーダル --- */
+    var catchModal = this._el('div', 'ui-catch-modal', '');
+    catchModal.id = 'ui-catch-modal';
+    catchModal.innerHTML =
+      '<div class="ui-catch-card" id="ui-catch-card">'
+      + '<div class="ui-catch-card__badges" id="ui-catch-badges"></div>'
+      + '<div class="ui-catch-card__fish-name" id="ui-catch-name"></div>'
+      + '<div class="ui-catch-card__fish-name-en" id="ui-catch-name-en"></div>'
+      + '<div class="ui-catch-card__svg-wrap" id="ui-catch-svg"></div>'
+      + '<div class="ui-catch-card__stats">'
+      + '<div class="ui-catch-stat"><div class="ui-catch-stat__label">サイズ</div><div class="ui-catch-stat__value" id="ui-catch-size">—</div></div>'
+      + '<div class="ui-catch-stat"><div class="ui-catch-stat__label">重量</div><div class="ui-catch-stat__value" id="ui-catch-weight">—</div></div>'
+      + '<div class="ui-catch-stat"><div class="ui-catch-stat__label">レア度</div><div class="ui-catch-stat__value" id="ui-catch-rarity">—</div></div>'
+      + '</div>'
+      + '<div class="ui-catch-card__coins" id="ui-catch-coins"></div>'
+      + '<button class="ui-catch-card__close-btn" id="ui-catch-close">閉じる</button>'
+      + '</div>';
+    root.appendChild(catchModal);
+    this._dom.catchModal = catchModal;
+
+    /* --- 図鑑 --- */
+    var dex = this._el('div', 'ui-dex', '');
+    dex.id = 'ui-dex';
+    dex.innerHTML =
+      '<div class="ui-panel-header">'
+      + '<div><span class="ui-panel-header__title">📖 図鑑</span>'
+      + '<span class="ui-panel-header__sub" id="ui-dex-progress">0/0種</span></div>'
+      + '<button class="ui-panel-close" id="ui-dex-close">✕</button>'
+      + '</div>'
+      + '<div class="ui-dex__grid-wrap">'
+      + '<div class="ui-dex__grid" id="ui-dex-grid"></div>'
+      + '</div>';
+    root.appendChild(dex);
+    this._dom.dex = dex;
+
+    /* --- 図鑑詳細 --- */
+    var dexDetail = this._el('div', 'ui-dex-detail', '');
+    dexDetail.id = 'ui-dex-detail';
+    dexDetail.innerHTML =
+      '<div class="ui-dex-detail__card">'
+      + '<button class="ui-dex-detail__close" id="ui-dex-detail-close">✕</button>'
+      + '<div class="ui-dex-detail__name" id="ui-dex-detail-name"></div>'
+      + '<div class="ui-dex-detail__name-en" id="ui-dex-detail-name-en"></div>'
+      + '<div class="ui-dex-detail__svg-wrap" id="ui-dex-detail-svg"></div>'
+      + '<div class="ui-dex-detail__rarity" id="ui-dex-detail-rarity"></div>'
+      + '<div class="ui-dex-detail__meta" id="ui-dex-detail-meta"></div>'
+      + '<div class="ui-dex-detail__desc" id="ui-dex-detail-desc"></div>'
+      + '<div class="ui-dex-detail__record" id="ui-dex-detail-record"></div>'
+      + '</div>';
+    root.appendChild(dexDetail);
+    this._dom.dexDetail = dexDetail;
+
+    /* --- タックル画面 --- */
+    var tackle = this._el('div', 'ui-tackle', '');
+    tackle.id = 'ui-tackle';
+    tackle.innerHTML =
+      '<div class="ui-panel-header">'
+      + '<span class="ui-panel-header__title">🎣 タックル</span>'
+      + '<button class="ui-panel-close" id="ui-tackle-close">✕</button>'
+      + '</div>'
+      + '<div class="ui-tackle__tabs">'
+      + '<button class="ui-tackle__tab is-active" data-tab="rod">竿</button>'
+      + '<button class="ui-tackle__tab" data-tab="reel">リール</button>'
+      + '<button class="ui-tackle__tab" data-tab="rig">仕掛け</button>'
+      + '<button class="ui-tackle__tab" data-tab="bait">エサ</button>'
+      + '</div>'
+      + '<div class="ui-tackle__list-wrap" id="ui-tackle-list"></div>';
+    root.appendChild(tackle);
+    this._dom.tackle = tackle;
+
+    /* --- メニュー --- */
+    var menu = this._el('div', 'ui-menu', '');
+    menu.id = 'ui-menu';
+    menu.innerHTML =
+      '<div class="ui-menu__card">'
+      + '<div class="ui-menu__title">メニュー</div>'
+      + '<button class="ui-menu__btn" id="ui-menu-resume">再開</button>'
+      + '<button class="ui-menu__btn" id="ui-menu-sound">🔊 音 ON/OFF</button>'
+      + '<button class="ui-menu__btn is-secondary" id="ui-menu-title">タイトルへ戻る</button>'
+      + '</div>';
+    root.appendChild(menu);
+    this._dom.menu = menu;
+
+    /* ===== イベント登録 ===== */
+    this._bindEvents();
+  }
+
+  /* ===== イベントバインド ===== */
+  _bindEvents() {
+    var self = this;
+
+    // タイトル「釣りを始める」
+    this._on('ui-start-btn', 'click', function() {
+      if (self._game && typeof self._game.startGame === 'function') {
+        self._game.startGame();
+      }
+    });
+
+    // HUDボタン
+    this._on('ui-btn-dex',    'click', function() { self.openDex(); });
+    this._on('ui-btn-tackle', 'click', function() { self.openTackle(); });
+    this._on('ui-btn-menu',   'click', function() { self.openMenu(); });
+
+    // 釣果モーダル閉じる
+    this._on('ui-catch-close', 'click', function() {
+      if (self._game && typeof self._game.dismissCatch === 'function') {
+        self._game.dismissCatch();
+      }
+      self._dom.catchModal.classList.remove('is-active');
+    });
+
+    // 図鑑閉じる
+    this._on('ui-dex-close', 'click', function() { self.closeDex(); });
+    this._on('ui-dex-detail-close', 'click', function() {
+      self._dom.dexDetail.classList.remove('is-active');
+    });
+
+    // タックル画面閉じる
+    this._on('ui-tackle-close', 'click', function() { self.closeTackle(); });
+
+    // タックルタブ
+    var tabs = this._root.querySelectorAll('.ui-tackle__tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].addEventListener('click', function(e) {
+        var tab = e.currentTarget.getAttribute('data-tab');
+        self._switchTackleTab(tab);
+      });
+    }
+
+    // メニューボタン
+    this._on('ui-menu-resume', 'click', function() {
+      self.closeMenu();
+      if (self._game && typeof self._game.resume === 'function') {
+        self._game.resume();
+      }
+    });
+    this._on('ui-menu-sound', 'click', function() {
+      if (self._game && typeof self._game.toggleSound === 'function') {
+        self._game.toggleSound();
+      }
+    });
+    this._on('ui-menu-title', 'click', function() {
+      self.closeMenu();
+      self.openTitle();
+    });
+  }
+
+  /* ===== ユーティリティ ===== */
+  _el(tag, cls, html) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (html !== undefined) el.innerHTML = html;
+    return el;
+  }
+
+  _on(id, event, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener(event, fn);
+  }
+
+  _get(id) {
+    return document.getElementById(id);
+  }
+
+  /* ===== 公開: bind ===== */
+  /**
+   * GameCore インスタンスを受け取り連携。
+   * @param {object} game GameCore
+   */
+  bind(game) {
+    this._game = game;
+  }
+
+  /* ===== 画面: タイトル ===== */
+  openTitle() {
+    this._dom.title.style.display    = '';
+    this._dom.hud.classList.remove('is-active');
+    this._dom.dex.classList.remove('is-active');
+    this._dom.tackle.classList.remove('is-active');
+    this._dom.menu.classList.remove('is-active');
+    this._dom.catchModal.classList.remove('is-active');
+    this._dom.biteMinor.classList.remove('is-active');
+    this._dom.biteMajor.classList.remove('is-active');
+    this._biteLevel = 0;
+  }
+
+  _hideTitle() {
+    this._dom.title.style.display = 'none';
+    this._dom.hud.classList.add('is-active');
+  }
+
+  /* ===== 公開: setHUD ===== */
+  /**
+   * 毎フレーム呼ばれる。差分のみ DOM 更新。
+   * @param {object} p { state, tension, distance, stamina, coins, time, speciesHint }
+   */
+  setHUD(p) {
+    if (!p) return;
+
+    var cache = this._hudCache;
+    var g = this._get.bind(this);
+
+    // ── タイトル非表示 ──
+    if (this._dom.title.style.display !== 'none') {
+      this._hideTitle();
+    }
+
+    /* --- 時刻 --- */
+    var timeVal = (p.time !== undefined) ? p.time : 0;
+    if (timeVal !== cache.time) {
+      cache.time = timeVal;
+      var iconEl = g('ui-time-icon');
+      var txtEl  = g('ui-time-text');
+      if (iconEl) iconEl.textContent = UITimeIcon(timeVal);
+      if (txtEl)  txtEl.textContent  = UITimeString(timeVal);
+    }
+
+    /* --- コイン --- */
+    if (p.coins !== undefined && p.coins !== cache.coins) {
+      cache.coins = p.coins;
+      var coinEl = g('ui-coin-text');
+      if (coinEl) coinEl.textContent = p.coins.toLocaleString();
+
+      // タックル画面が開いている場合は購入ボタンを再評価
+      if (this._dom.tackle.classList.contains('is-active')) {
+        this._renderTackleList();
+      }
+    }
+
+    /* --- 状態テキスト --- */
+    if (p.state !== undefined && p.state !== cache.state) {
+      cache.state = p.state;
+      var stEl = g('ui-status-text');
+      if (stEl) {
+        stEl.textContent  = this._stateLabel(p.state);
+        stEl.className    = 'ui-hud__status' + (p.state === 'bite' ? ' is-bite' : '');
+      }
+
+      // キャストメーター表示切替
+      var castMeter = g('ui-cast-meter');
+      if (castMeter) {
+        castMeter.classList.toggle('is-active', p.state === 'casting');
+      }
+
+      // テンションパネル
+      var tensionPanel = g('ui-tension-panel');
+      if (tensionPanel) {
+        tensionPanel.classList.toggle('is-active', p.state === 'fight');
+      }
+
+      // タックル情報更新(equipped)
+      this._updateTackleHUD();
+    }
+
+    /* --- テンション --- */
+    if (p.tension !== undefined && p.tension !== cache.tension) {
+      cache.tension = p.tension;
+      var tFill = g('ui-tension-fill');
+      if (tFill) {
+        var pct = Math.min(100, Math.max(0, p.tension * 100));
+        tFill.style.height = pct + '%';
+        tFill.className = 'ui-hud__tension-fill'
+          + (p.tension > 0.8 ? ' is-danger' : p.tension > 0.55 ? ' is-warn' : '');
+      }
+    }
+
+    /* --- 距離 --- */
+    if (p.distance !== undefined && p.distance !== cache.distance) {
+      cache.distance = p.distance;
+      var distEl = g('ui-fish-dist');
+      if (distEl) distEl.textContent = p.distance.toFixed(1);
+    }
+
+    /* --- スタミナ --- */
+    if (p.stamina !== undefined && p.stamina !== cache.stamina) {
+      cache.stamina = p.stamina;
+      var sFill = g('ui-stamina-fill');
+      if (sFill) {
+        sFill.style.width = Math.min(100, Math.max(0, p.stamina * 100)) + '%';
+        sFill.style.background = p.stamina > 0.5 ? '#22aa66' : p.stamina > 0.25 ? '#ddaa11' : '#cc3333';
+      }
+    }
+  }
+
+  /* キャストパワーを直接セット (setHUD 経由以外でも呼べる) */
+  setCastPower(power) {
+    var fill = this._get('ui-cast-fill');
+    if (!fill) return;
+    var pct = Math.min(100, Math.max(0, power * 100));
+    fill.style.width = pct + '%';
+
+    // キャストメーター表示
+    var meter = this._get('ui-cast-meter');
+    if (meter) meter.classList.add('is-active');
+  }
+
+  _stateLabel(state) {
+    var map = {
+      idle:    '長押しでキャスト',
+      casting: 'キャスト中…',
+      waiting: 'アタリを待て…',
+      bite:    '!! 合わせろ !!',
+      fight:   'リールを巻け！',
+      landed:  '釣れた！',
+      title:   ''
+    };
+    return map[state] || '';
+  }
+
+  _updateTackleHUD() {
+    var game = this._game;
+    if (!game || !game.equipped) return;
+    var eq = game.equipped;
+    var rodEl  = this._get('ui-rod-name');
+    var baitEl = this._get('ui-bait-name');
+    if (rodEl  && eq.rod)  rodEl.textContent  = eq.rod.name  || eq.rod.id  || '—';
+    if (baitEl && eq.bait) baitEl.textContent = eq.bait.name || eq.bait.id || '—';
+  }
+
+  /* ===== 公開: showBite ===== */
+  /**
+   * @param {number} level 0=なし 1=前アタリ 2=本アタリ
+   */
+  showBite(level) {
+    var self = this;
+    this._biteLevel = level;
+
+    var minor = this._dom.biteMinor;
+    var major = this._dom.biteMajor;
+
+    if (this._biteTimeout) {
+      clearTimeout(this._biteTimeout);
+      this._biteTimeout = null;
+    }
+
+    if (level === 0) {
+      minor.classList.remove('is-active');
+      major.classList.remove('is-active');
+    } else if (level === 1) {
+      minor.classList.add('is-active');
+      major.classList.remove('is-active');
+    } else if (level >= 2) {
+      minor.classList.remove('is-active');
+      // 再生のために一旦削除→付与
+      major.classList.remove('is-active');
+      void major.offsetWidth; // reflow
+      major.classList.add('is-active');
+      // 本アタリは約 1.2s で自動消去しない(game 側から showBite(0) を呼ぶ想定)
+    }
+  }
+
+  /* ===== 公開: showCatch ===== */
+  /**
+   * @param {object} species    SPECIES エントリ
+   * @param {number} sizeCm
+   * @param {number} weightKg
+   * @param {number} coins
+   * @param {boolean} isNew     初釣果
+   * @param {boolean} isRecord  記録更新
+   */
+  showCatch(species, sizeCm, weightKg, coins, isNew, isRecord) {
+    var modal = this._dom.catchModal;
+    var card  = this._get('ui-catch-card');
+
+    // fantasy 枠
+    var isFantasy = species && species.category === 'fantasy';
+    card.className = 'ui-catch-card' + (isFantasy ? ' is-fantasy' : '');
+
+    // バッジ
+    var badges = this._get('ui-catch-badges');
+    badges.innerHTML = '';
+    if (isNew) {
+      var nb = document.createElement('span');
+      nb.className = 'ui-catch-badge is-new';
+      nb.textContent = 'NEW!';
+      badges.appendChild(nb);
+    }
+    if (isRecord) {
+      var rb = document.createElement('span');
+      rb.className = 'ui-catch-badge is-record';
+      rb.textContent = '記録更新！';
+      badges.appendChild(rb);
+    }
+
+    // 名前
+    this._get('ui-catch-name').textContent    = (species && species.name)   || '不明の魚';
+    this._get('ui-catch-name-en').textContent = (species && species.nameEn) || '';
+
+    // SVG
+    var svgWrap = this._get('ui-catch-svg');
+    svgWrap.innerHTML = species ? UIBuildFishSVG(species, false, 240, 110) : '';
+
+    // スタッツ
+    this._get('ui-catch-size').textContent   = sizeCm   ? sizeCm.toFixed(1)   + ' cm' : '—';
+    this._get('ui-catch-weight').textContent = weightKg ? weightKg.toFixed(2) + ' kg' : '—';
+    this._get('ui-catch-rarity').textContent = species  ? UIStars(species.rarity) : '—';
+
+    // コイン
+    this._get('ui-catch-coins').textContent = '獲得 🪙 ' + (coins || 0).toLocaleString();
+
+    modal.classList.add('is-active');
+
+    // アタリ演出を消す
+    this.showBite(0);
+  }
+
+  /* ===== 公開: openDex / closeDex ===== */
+  openDex() {
+    this._renderDexGrid();
+    this._dom.dex.classList.add('is-active');
+  }
+
+  closeDex() {
+    this._dom.dex.classList.remove('is-active');
+    this._dom.dexDetail.classList.remove('is-active');
+  }
+
+  _renderDexGrid() {
+    // SPECIES / records は実行時参照
+    var speciesList;
+    try { speciesList = SPECIES; } catch(e) { speciesList = []; }
+    var records;
+    try { records = (this._game && this._game.records) ? this._game.records : {}; } catch(e) { records = {}; }
+
+    var grid = this._get('ui-dex-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    var caught = 0;
+    var total  = speciesList.length;
+    var self   = this;
+
+    for (var i = 0; i < speciesList.length; i++) {
+      (function(sp) {
+        var rec     = records[sp.id];
+        var isCaught  = !!(rec && rec.count > 0);
+        var isFantasy = sp.category === 'fantasy';
+        if (isCaught) caught++;
+
+        var cell = document.createElement('div');
+        cell.className = 'ui-dex-cell'
+          + (isCaught  ? ' is-caught'  : ' is-unknown')
+          + (isFantasy ? ' is-fantasy' : '');
+
+        var svg = UIBuildFishSVG(sp, !isCaught, 64, 44);
+
+        var nameHtml = isCaught
+          ? '<div class="ui-dex-cell__name">' + sp.name + '</div>'
+          : '<div class="ui-dex-cell__name" style="color:#555">???</div>';
+
+        var countHtml = '';
+        if (isCaught && rec) {
+          countHtml = '<div class="ui-dex-cell__count">' + rec.count + '匹</div>'
+            + '<div class="ui-dex-cell__size">' + rec.maxSize.toFixed(0) + 'cm</div>';
+        }
+
+        cell.innerHTML =
+          '<div class="ui-dex-cell__silhouette">' + svg + '</div>'
+          + nameHtml
+          + countHtml;
+
+        cell.addEventListener('click', function() {
+          self._showDexDetail(sp, isCaught, records[sp.id]);
+        });
+
+        grid.appendChild(cell);
+      })(speciesList[i]);
+    }
+
+    var prog = this._get('ui-dex-progress');
+    if (prog) prog.textContent = caught + '/' + total + '種';
+  }
+
+  _showDexDetail(sp, isCaught, rec) {
+    var isFantasy = sp.category === 'fantasy';
+
+    this._get('ui-dex-detail-name').textContent    = sp.name   || '???';
+    this._get('ui-dex-detail-name-en').textContent = isCaught  ? (sp.nameEn || '') : '???';
+
+    var svgWrap = this._get('ui-dex-detail-svg');
+    svgWrap.innerHTML = UIBuildFishSVG(sp, !isCaught, 200, 100);
+
+    this._get('ui-dex-detail-rarity').textContent = 'レア度 ' + (isCaught ? UIStars(sp.rarity) : '★?????');
+
+    // 生息情報
+    var meta = '';
+    if (isCaught) {
+      var habitatMap = { bottom:'底層', mid:'中層', surface:'表層' };
+      var activeMap  = { day:'昼',     dusk:'夕',   night:'夜' };
+      var habitats  = sp.habitat ? sp.habitat.map(function(h){ return habitatMap[h]||h; }).join('・') : '—';
+      var actives   = sp.active  ? sp.active.map(function(a){  return activeMap[a]||a;  }).join('・') : '—';
+      meta = '棚: ' + habitats + '　時間帯: ' + actives
+           + '\n体長: ' + sp.minSize + '〜' + sp.maxSize + ' cm';
+    } else {
+      meta = '— 未捕獲 —';
+    }
+    this._get('ui-dex-detail-meta').textContent = meta;
+    this._get('ui-dex-detail-desc').textContent = isCaught ? (sp.desc || '') : '詳細は捕獲後に解禁';
+
+    var recordEl = this._get('ui-dex-detail-record');
+    if (rec && rec.count > 0) {
+      recordEl.textContent = '捕獲数: ' + rec.count + '匹  最大: ' + rec.maxSize.toFixed(1) + ' cm';
+    } else {
+      recordEl.textContent = '';
+    }
+
+    // fantasy 枠
+    var card = this._dom.dexDetail.querySelector('.ui-dex-detail__card');
+    if (card) {
+      card.style.borderColor = isFantasy ? 'rgba(160,60,220,0.6)' : '';
+      card.style.boxShadow   = isFantasy ? '0 0 20px rgba(160,60,220,0.3)' : '';
+    }
+
+    this._dom.dexDetail.classList.add('is-active');
+  }
+
+  /* ===== 公開: openTackle / closeTackle ===== */
+  openTackle() {
+    this._switchTackleTab(this._tackleTab);
+    this._dom.tackle.classList.add('is-active');
+  }
+
+  closeTackle() {
+    this._dom.tackle.classList.remove('is-active');
+  }
+
+  _switchTackleTab(tab) {
+    this._tackleTab = tab;
+
+    // タブ active 切替
+    var tabs = this._root.querySelectorAll('.ui-tackle__tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle('is-active', tabs[i].getAttribute('data-tab') === tab);
+    }
+
+    this._renderTackleList();
+  }
+
+  _renderTackleList() {
+    var list = this._get('ui-tackle-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    var tab  = this._tackleTab;
+    var game = this._game;
+    var coins = (game && game.coins !== undefined) ? game.coins : 0;
+    var equipped = (game && game.equipped) ? game.equipped : {};
+    var owned    = (game && game.owned)    ? game.owned    : {};
+
+    var items    = [];
+    var catKey   = ''; // equipped のキー
+    var ownedArr = [];
+    var statKeys = [];
+
+    try {
+      if (tab === 'rod') {
+        items    = TACKLE_RODS;
+        catKey   = 'rod';
+        ownedArr = owned.rods   || [];
+        statKeys = [{ key:'power',   label:'パワー'   }, { key:'control', label:'コントロール' }];
+      } else if (tab === 'reel') {
+        items    = TACKLE_REELS;
+        catKey   = 'reel';
+        ownedArr = owned.reels  || [];
+        statKeys = [{ key:'drag',    label:'ドラグ'   }, { key:'speed',   label:'スピード' }];
+      } else if (tab === 'rig') {
+        items    = TACKLE_RIGS;
+        catKey   = 'rig';
+        ownedArr = owned.rigs   || [];
+        statKeys = [{ key:'hookSize', label:'鈎サイズ' }];
+      } else if (tab === 'bait') {
+        items    = TACKLE_BAITS;
+        catKey   = 'bait';
+        ownedArr = []; // エサは消耗品・常時購入可
+        statKeys = [];
+      }
+    } catch(e) {
+      items = [];
+    }
+
+    var self = this;
+
+    for (var i = 0; i < items.length; i++) {
+      (function(item) {
+        var isEquipped = equipped[catKey] && equipped[catKey].id === item.id;
+        var isOwned    = tab === 'bait' ? true : ownedArr.some(function(o){ return o.id === item.id; });
+
+        var el = document.createElement('div');
+        el.className = 'ui-tackle__item' + (isEquipped ? ' is-equipped' : '');
+
+        // 性能★
+        var statsHtml = '';
+        for (var k = 0; k < statKeys.length; k++) {
+          var sk = statKeys[k];
+          statsHtml += '<span class="ui-tackle__stat">'
+            + sk.label + ': <span class="ui-tackle__stat-stars">'
+            + UIStars(item[sk.key] || 0) + '</span></span>';
+        }
+        if (tab === 'rig' && item.type) {
+          statsHtml += '<span class="ui-tackle__stat">種別: ' + item.type + '</span>';
+        }
+
+        // アクションボタン
+        var actionHtml = '';
+        if (isEquipped) {
+          actionHtml = '<span class="ui-tackle__equipped-badge">装備中</span>';
+        } else if (isOwned) {
+          actionHtml = '<button class="ui-tackle__action-btn is-equip" data-cat="' + catKey + '" data-id="' + item.id + '">装備する</button>';
+        } else {
+          var canBuy  = coins >= (item.price || 0);
+          actionHtml = '<span class="ui-tackle__price">🪙' + (item.price || 0) + '</span>'
+            + '<button class="ui-tackle__action-btn is-buy" data-cat="' + catKey + '" data-id="' + item.id + '"'
+            + (canBuy ? '' : ' disabled') + '>購入</button>';
+        }
+
+        el.innerHTML =
+          '<div class="ui-tackle__item-info">'
+          + '<div class="ui-tackle__item-name">' + (item.name || item.id) + '</div>'
+          + '<div class="ui-tackle__item-desc">'  + (item.desc || '') + '</div>'
+          + (statsHtml ? '<div class="ui-tackle__item-stats">' + statsHtml + '</div>' : '')
+          + '</div>'
+          + actionHtml;
+
+        // ボタンクリック
+        var btn = el.querySelector('.ui-tackle__action-btn');
+        if (btn) {
+          btn.addEventListener('click', function(e) {
+            var cat = e.currentTarget.getAttribute('data-cat');
+            var id  = e.currentTarget.getAttribute('data-id');
+            var isBuyBtn = e.currentTarget.classList.contains('is-buy');
+
+            if (!game) return;
+
+            if (isBuyBtn && typeof game.buy === 'function') {
+              var ok = game.buy(cat, id);
+              if (ok !== false) { self._renderTackleList(); }
+            } else if (!isBuyBtn && typeof game.equip === 'function') {
+              game.equip(cat, id);
+              self._renderTackleList();
+            }
+          });
+        }
+
+        list.appendChild(el);
+      })(items[i]);
+    }
+  }
+
+  /* ===== 公開: openMenu / closeMenu ===== */
+  openMenu() {
+    this._dom.menu.classList.add('is-active');
+  }
+
+  closeMenu() {
+    this._dom.menu.classList.remove('is-active');
+  }
+}
+
+
+</script>
+</body>
+</html>
